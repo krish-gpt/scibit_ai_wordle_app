@@ -126,15 +126,15 @@ const SciBitPage: FC = () => {
     initializeGame();
   }, [initializeGame]);
 
-  const handleCharInput = (char: string) => {
+  const handleCharInput = useCallback((char: string) => {
     if (gameState !== 'playing' || currentGuess.length >= wordLength) return;
     setCurrentGuess((prev) => prev + char.toUpperCase());
-  };
+  }, [gameState, currentGuess, wordLength]);
 
-  const handleDelete = () => {
+  const handleDelete = useCallback(() => {
     if (gameState !== 'playing') return;
     setCurrentGuess((prev) => prev.slice(0, -1));
-  };
+  }, [gameState]);
 
   const handleEnter = useCallback(async () => {
     if (gameState !== 'playing' || guesses.length >= MAX_GUESSES) return;
@@ -184,12 +184,18 @@ const SciBitPage: FC = () => {
     const newKeyStatuses = { ...keyStatuses };
     feedback.forEach(({ char, status }) => {
       const upperChar = char.toUpperCase();
+      const currentKeyStatus = newKeyStatuses[upperChar];
+
       if (status === 'correct') {
         newKeyStatuses[upperChar] = 'correct';
-      } else if (status === 'present' && newKeyStatuses[upperChar] !== 'correct') {
-        newKeyStatuses[upperChar] = 'present';
-      } else if (status === 'absent' && !newKeyStatuses[upperChar]) {
-        newKeyStatuses[upperChar] = 'absent';
+      } else if (status === 'present') {
+        if (currentKeyStatus !== 'correct') {
+          newKeyStatuses[upperChar] = 'present';
+        }
+      } else if (status === 'absent') {
+        if (currentKeyStatus !== 'correct' && currentKeyStatus !== 'present') {
+         newKeyStatuses[upperChar] = 'absent';
+        }
       }
     });
     setKeyStatuses(newKeyStatuses);
