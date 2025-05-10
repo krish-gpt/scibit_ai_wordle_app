@@ -45,6 +45,7 @@ body {
     --tile-present-foreground: 0 0% 10%; /* Dark text on yellow */
     --tile-absent-background: 210 10% 50%; /* Medium Gray - Gray */
     --tile-absent-foreground: 0 0% 100%; /* White text on gray */
+    
     --tile-default-border: hsl(var(--border));
     --tile-default-foreground: hsl(var(--foreground));
 
@@ -101,6 +102,7 @@ body {
     --tile-present-foreground: 0 0% 10%; /* Dark text on yellow */
     --tile-absent-background: 210 10% 35%; /* Darker Gray */
     --tile-absent-foreground: 210 17% 80%; /* Lighter text on dark gray */
+
     --tile-default-border: hsl(var(--border));
     --tile-default-foreground: hsl(var(--foreground));
   }
@@ -117,6 +119,21 @@ body {
     flex-direction: column;
   }
 }
+
+@layer utilities {
+  .bg-tile-correct-background { background-color: hsl(var(--tile-correct-background)); }
+  .text-tile-correct-foreground { color: hsl(var(--tile-correct-foreground)); }
+  .border-tile-correct-background { border-color: hsl(var(--tile-correct-background)); }
+
+  .bg-tile-present-background { background-color: hsl(var(--tile-present-background)); }
+  .text-tile-present-foreground { color: hsl(var(--tile-present-foreground)); }
+  .border-tile-present-background { border-color: hsl(var(--tile-present-background)); }
+
+  .bg-tile-absent-background { background-color: hsl(var(--tile-absent-background)); }
+  .text-tile-absent-foreground { color: hsl(var(--tile-absent-foreground)); }
+  .border-tile-absent-background { border-color: hsl(var(--tile-absent-background)); }
+}
+
 
 /* Tile flip animation */
 @keyframes flip {

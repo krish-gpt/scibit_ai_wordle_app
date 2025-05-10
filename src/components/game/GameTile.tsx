@@ -12,7 +12,7 @@ interface GameTileProps {
 
 const GameTile: FC<GameTileProps> = ({ char, status = 'empty', isRevealing, isCurrentRow, isSubmitted }) => {
   const tileStyles = {
-    empty: 'border-tile-default-border bg-background text-tile-default-foreground',
+    empty: 'border-border bg-background text-foreground', // Updated to use standard Tailwind classes
     tbd: 'border-primary bg-background text-primary', // For currently typed letters
     correct: 'bg-tile-correct-background text-tile-correct-foreground border-tile-correct-background',
     present: 'bg-tile-present-background text-tile-present-foreground border-tile-present-background',
