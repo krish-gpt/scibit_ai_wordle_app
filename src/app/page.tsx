@@ -13,7 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { generateDailyWord } from '@/ai/flows/generate-daily-word';
 import { generateClue } from '@/ai/flows/generate-clue';
 import { generateTermSummary } from '@/ai/flows/generate-term-summary';
-import type { TileStatus, GuessFeedback, KeyStatus, LetterFeedback } from '@/lib/types';
+import type { GuessFeedback, KeyStatus, LetterFeedback } from '@/lib/types';
 
 const MAX_GUESSES = 6;
 const DEFAULT_DIFFICULTY = 'medium' as 'easy' | 'medium' | 'hard';
@@ -44,6 +44,7 @@ const SciBitPage: FC = () => {
     setGuesses([]);
     setCurrentGuess('');
     setClue(null);
+    setIsClueLoading(true); // Start loading clue early
     setTermSummary(null);
     setKeyStatuses({});
     setErrorMsg(null);
@@ -100,11 +101,31 @@ const SciBitPage: FC = () => {
         
         setTargetWord(dailyWordData.word);
         setWordLength(dailyWordData.word.length);
+
+        // Fetch clue immediately after setting the target word
+        if (dailyWordData.word) {
+          generateClue({ term: dailyWordData.word })
+            .then(clueData => {
+                setClue(clueData.clue);
+            })
+            .catch(err => {
+                console.error("Error fetching initial clue:", err);
+                setClue("Could not load the clue at this moment.");
+                toast({ title: "Clue Error", description: "Could not fetch the clue.", variant: "destructive" });
+            })
+            .finally(() => {
+                setIsClueLoading(false);
+            });
+        } else {
+            setIsClueLoading(false); // No word, so not loading clue
+        }
+        
         setGameState('playing');
         return; 
 
       } catch (error) {
         console.error(`Error during game initialization (attempt ${attempts}):`, error);
+        setIsClueLoading(false); // Stop clue loading on error
         if (attempts >= maxAttempts) {
           const message = error instanceof Error ? error.message : "Failed to load the game. Please try refreshing the page.";
           setErrorMsg(message);
@@ -246,21 +267,6 @@ const SciBitPage: FC = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [gameState, handleEnter, handleCharInput, handleDelete]);
 
-
-  const handleGetClue = async () => {
-    if (!targetWord) return;
-    setIsClueLoading(true);
-    try {
-      const clueData = await generateClue({ term: targetWord });
-      setClue(clueData.clue);
-    } catch (error) {
-      console.error("Error fetching clue:", error);
-      toast({ title: "Error", description: "Could not fetch a clue.", variant: "destructive" });
-    } finally {
-      setIsClueLoading(false);
-    }
-  };
-
   const handleShare = () => {
     const getEmojiGrid = () => guesses
         .filter(g => g.isSubmitted)
@@ -318,9 +324,7 @@ const SciBitPage: FC = () => {
         />
         <ClueDisplay
           clue={clue}
-          onGetClue={handleGetClue}
           isLoading={isClueLoading}
-          disabled={gameState !== 'playing'}
         />
         <Keyboard
           onChar={handleCharInput}
