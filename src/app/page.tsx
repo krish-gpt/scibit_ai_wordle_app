@@ -8,7 +8,7 @@ import Keyboard from '@/components/game/Keyboard';
 import ClueDisplay from '@/components/game/ClueDisplay';
 import ResultsModal from '@/components/game/ResultsModal';
 import { Button } from '@/components/ui/button';
-import { Loader2, AlertTriangle } from 'lucide-react';
+import { Loader2, AlertTriangle, RotateCw } from 'lucide-react'; // Added RotateCw
 import { useToast } from "@/hooks/use-toast";
 import { generateDailyWord } from '@/ai/flows/generate-daily-word';
 import { generateClue } from '@/ai/flows/generate-clue';
@@ -48,44 +48,85 @@ const SciBitPage: FC = () => {
     setKeyStatuses({});
     setErrorMsg(null);
 
-    try {
-      const today = new Date().toISOString().split('T')[0];
-      const storedGame = localStorage.getItem(`scibit-${today}-${difficulty}`);
-      let dailyWordData;
+    let attempts = 0;
+    const maxAttempts = 2; // Initial attempt + 1 retry
 
-      if (storedGame) {
-        dailyWordData = JSON.parse(storedGame);
-      } else {
-        const { word } = await generateDailyWord({ difficulty });
-        if (!word || typeof word !== 'string' || word.trim() === '') {
-          throw new Error("AI failed to generate a valid word.");
+    while (attempts < maxAttempts) {
+      attempts++;
+      try {
+        const today = new Date().toISOString().split('T')[0];
+        const storageKey = `scibit-${today}-${difficulty}`;
+        let dailyWordData = null; // Initialize as null
+
+        // Attempt to load from localStorage only on the first overall attempt.
+        // If we are retrying due to a generation failure, we skip localStorage.
+        if (attempts === 1) {
+          const storedGame = localStorage.getItem(storageKey);
+          if (storedGame) {
+            try {
+              dailyWordData = JSON.parse(storedGame);
+              // Validate word from localStorage
+              if (!dailyWordData || !dailyWordData.word || typeof dailyWordData.word !== 'string' || dailyWordData.word.length < 3 || dailyWordData.word.length > 10) {
+                console.warn(`Stored word "${dailyWordData?.word}" has invalid length or format. Clearing and regenerating.`);
+                localStorage.removeItem(storageKey);
+                dailyWordData = null; // Force regeneration
+              }
+            } catch (parseError) {
+                console.error("Error parsing stored game data:", parseError);
+                localStorage.removeItem(storageKey);
+                dailyWordData = null; // Force regeneration
+            }
+          }
         }
-        dailyWordData = { word: word.toUpperCase(), date: today, difficulty };
-        localStorage.setItem(`scibit-${today}-${difficulty}`, JSON.stringify(dailyWordData));
-      }
-      
-      // Validate word (basic validation for non-empty and reasonable length)
-      if (dailyWordData.word.length < 3 || dailyWordData.word.length > 10) {
-        console.warn(`Generated word "${dailyWordData.word}" has unusual length. Forcing new generation.`);
-        localStorage.removeItem(`scibit-${today}-${difficulty}`); // Clear bad word
-        // Potentially retry or show error. For now, let's try one more time if this happens.
-        // This might lead to infinite loop if AI consistently fails. Better to show error after one retry.
-        // To keep it simple, we'll just throw and let user try refresh for now.
-        throw new Error("Generated word has an unsupported length. Please refresh to try again.");
-      }
 
-      setTargetWord(dailyWordData.word);
-      setWordLength(dailyWordData.word.length);
-      setGameState('playing');
-    } catch (error) {
-      console.error("Error fetching daily word:", error);
-      setErrorMsg(error instanceof Error ? error.message : "Failed to load the game. Please try refreshing the page.");
-      setGameState('error');
-      toast({
-        title: "Error",
-        description: "Could not fetch the daily word. Please try again later.",
-        variant: "destructive",
-      });
+        if (!dailyWordData) { // Need to generate a new word
+          console.log(`Attempting to generate word (attempt ${attempts})`);
+          const { word } = await generateDailyWord({ difficulty });
+          if (!word || typeof word !== 'string' || word.trim() === '') {
+            throw new Error("AI failed to generate a valid word string.");
+          }
+          dailyWordData = { word: word.toUpperCase(), date: today, difficulty };
+        }
+
+        // Validate the (potentially new) word
+        if (!dailyWordData.word || dailyWordData.word.length < 3 || dailyWordData.word.length > 10) {
+          console.warn(`Generated/loaded word "${dailyWordData.word}" has invalid length (attempt ${attempts}).`);
+          localStorage.removeItem(storageKey); // Ensure bad word is not stored
+          if (attempts < maxAttempts) {
+            dailyWordData = null; // Ensure regeneration on next attempt
+            continue; // Try again
+          } else {
+            throw new Error("Generated word has an unsupported length after multiple attempts.");
+          }
+        }
+
+        // Word is valid, store it (or re-store if it was from localStorage and re-validated)
+        localStorage.setItem(storageKey, JSON.stringify(dailyWordData));
+        
+        setTargetWord(dailyWordData.word);
+        setWordLength(dailyWordData.word.length);
+        setGameState('playing');
+        return; // Exit loop and function successfully
+
+      } catch (error) {
+        console.error(`Error during game initialization (attempt ${attempts}):`, error);
+        if (attempts >= maxAttempts) {
+          const message = error instanceof Error ? error.message : "Failed to load the game. Please try refreshing the page.";
+          setErrorMsg(message);
+          setGameState('error');
+          toast({
+            title: "Error",
+            description: message === "AI failed to generate a valid word string." || message === "Generated word has an unsupported length after multiple attempts." 
+                         ? message 
+                         : "Could not fetch or validate the daily word. Please try again later.",
+            variant: "destructive",
+          });
+          return; // Exit function with error
+        }
+        // If not max attempts, loop will continue for another try.
+        // Add a small delay before retrying to avoid hammering the API if needed
+        // await new Promise(resolve => setTimeout(resolve, 500)); 
+      }
     }
   }, [difficulty, toast]);
 
@@ -120,46 +161,73 @@ const SciBitPage: FC = () => {
       } else if (targetWord.includes(char)) {
         // Handle duplicate letters correctly
         const targetCharCount = targetWord.split('').filter(c => c === char).length;
-        const guessCharCountBeforeCurrent = currentGuess.slice(0, index).split('').filter(c => c === char).length;
-        let correctPositionsForChar = 0;
-        for(let i=0; i<targetWord.length; i++) {
-            if(targetWord[i] === char && currentGuess[i] === char) {
-                correctPositionsForChar++;
+        // Count correctly placed instances of this character so far in the guess
+        let correctInstanceOfCharInGuess = 0;
+        for (let i = 0; i < targetWord.length; i++) {
+          if (targetWord[i] === char && currentGuess[i] === char) {
+            correctInstanceOfCharInGuess++;
+          }
+        }
+        
+        // Count 'present' or 'correct' instances of this char in the guess UP TO THE CURRENT POSITION
+        let presentOrCorrectInstancesBeforeCurrent = 0;
+        for (let i = 0; i < index; i++) {
+            if (currentGuess[i] === char && (targetWord[i] === char || targetWord.includes(char))) {
+                presentOrCorrectInstancesBeforeCurrent++;
             }
         }
-        if (guessCharCountBeforeCurrent < targetCharCount - correctPositionsForChar) {
-             let occurrencesInGuess = 0;
-             let correctOccurrencesOfCharInGuess = 0;
-             for(let k=0; k<currentGuess.length; k++){
-                 if(currentGuess[k] === char) occurrencesInGuess++;
-                 if(currentGuess[k] === char && targetWord[k] === char && k <= index) correctOccurrencesOfCharInGuess++;
-             }
+        // A character is 'present' if it's in the word, not in the correct spot,
+        // and we haven't already accounted for all instances of this char (either as 'correct' or 'present' earlier in the guess)
+        if (presentOrCorrectInstancesBeforeCurrent < targetCharCount) {
+            status = 'present';
+        }
 
-             // Count "present" status for this char up to current index
-             let presentCount = 0;
-             for (let k = 0; k < index; k++) {
-                 if (currentGuess[k] === char && targetWord.includes(currentGuess[k]) && targetWord[k] !== currentGuess[k]) {
-                     presentCount++;
-                 }
-             }
-            
-            if ( (occurrencesInGuess - correctOccurrencesOfCharInGuess) <= (targetCharCount - correctPositionsForChar)) {
-                 status = 'present';
-            }
-        }
+
       }
       return { char, status };
     });
+    
+    // Refine "present" status to avoid over-counting for multiple letters
+    const refinedFeedback = [...newFeedback];
+    const targetWordChars = targetWord.split('');
 
-    const newGuesses = [...guesses, { letters: newFeedback, isSubmitted: true }];
+    currentGuess.split('').forEach((guessChar, guessIdx) => {
+        if (refinedFeedback[guessIdx].status === 'present') {
+            let targetCharOccurrences = targetWordChars.filter(tc => tc === guessChar).length;
+            let correctOccurrencesInGuess = 0;
+            let presentOccurrencesInGuess = 0;
+
+            for(let i = 0; i < wordLength; i++) {
+                if (currentGuess[i] === guessChar && targetWordChars[i] === guessChar) {
+                    correctOccurrencesInGuess++;
+                }
+            }
+            for(let i = 0; i < guessIdx; i++) { // count presents up to current
+                if (refinedFeedback[i].char === guessChar && refinedFeedback[i].status === 'present') {
+                    presentOccurrencesInGuess++;
+                }
+            }
+            if (presentOccurrencesInGuess >= (targetCharOccurrences - correctOccurrencesInGuess) ) {
+                 refinedFeedback[guessIdx].status = 'absent';
+            }
+        }
+    });
+
+
+    const newGuesses = [...guesses, { letters: refinedFeedback, isSubmitted: true }];
     setGuesses(newGuesses);
 
     // Update key statuses
     const newKeyStatuses = { ...keyStatuses };
-    newFeedback.forEach(({ char, status }) => {
+    refinedFeedback.forEach(({ char, status }) => {
       const upperChar = char.toUpperCase();
-      if (!newKeyStatuses[upperChar] || (status === 'correct') || (status === 'present' && newKeyStatuses[upperChar] !== 'correct')) {
-        newKeyStatuses[upperChar] = status;
+      // Prioritize 'correct' > 'present' > 'absent'
+      if (status === 'correct') {
+        newKeyStatuses[upperChar] = 'correct';
+      } else if (status === 'present' && newKeyStatuses[upperChar] !== 'correct') {
+        newKeyStatuses[upperChar] = 'present';
+      } else if (status === 'absent' && !newKeyStatuses[upperChar]) {
+        newKeyStatuses[upperChar] = 'absent';
       }
     });
     setKeyStatuses(newKeyStatuses);
@@ -169,7 +237,6 @@ const SciBitPage: FC = () => {
     if (currentGuess === targetWord) {
       setGameState('won');
       toast({ title: "You Won!", description: "Congratulations!", className: "bg-tile-correct-background text-tile-correct-foreground" });
-      // Fetch summary on win
       setIsSummaryLoading(true);
       generateTermSummary({ term: targetWord })
         .then(summaryData => setTermSummary(summaryData.summary))
@@ -181,7 +248,6 @@ const SciBitPage: FC = () => {
     } else if (newGuesses.length >= MAX_GUESSES) {
       setGameState('lost');
       toast({ title: "Game Over", description: `The word was ${targetWord}.`, variant: "destructive" });
-       // Fetch summary on loss
       setIsSummaryLoading(true);
       generateTermSummary({ term: targetWord })
         .then(summaryData => setTermSummary(summaryData.summary))
@@ -195,9 +261,11 @@ const SciBitPage: FC = () => {
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (gameState !== 'playing' || (gameState === 'won' || gameState === 'lost')) return; // Prevent input when modal is open
+      if (gameState !== 'playing' || (gameState === 'won' || gameState === 'lost')) return; 
 
       const key = event.key.toUpperCase();
+      if (event.metaKey || event.ctrlKey || event.altKey) return; // Ignore modified key presses
+
       if (key === 'ENTER') {
         handleEnter();
       } else if (key === 'BACKSPACE') {

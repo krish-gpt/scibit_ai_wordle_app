@@ -1,6 +1,7 @@
 import type { FC } from 'react';
 import GameTile from './GameTile';
 import type { GuessFeedback, TileStatus } from '@/lib/types';
+import { cn } from '@/lib/utils'; // Added import for cn
 
 interface GameBoardProps {
   guesses: GuessFeedback[];
