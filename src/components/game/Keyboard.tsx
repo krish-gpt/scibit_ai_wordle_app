@@ -1,3 +1,4 @@
+
 import type { FC } from 'react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -20,11 +21,11 @@ const Keyboard: FC<KeyboardProps> = ({ onChar, onDelete, onEnter, keyStatuses, d
   ];
 
   const getStatusClass = (status: TileStatus | undefined) => {
-    if (!status || status === 'empty' || status === 'tbd') return 'bg-secondary hover:bg-muted';
+    if (!status || status === 'empty' || status === 'tbd') return 'bg-secondary hover:bg-muted text-secondary-foreground'; // Ensure text color for default
     if (status === 'correct') return 'bg-tile-correct-background text-tile-correct-foreground hover:opacity-90';
     if (status === 'present') return 'bg-tile-present-background text-tile-present-foreground hover:opacity-90';
     if (status === 'absent') return 'bg-tile-absent-background text-tile-absent-foreground hover:opacity-90';
-    return 'bg-secondary hover:bg-muted';
+    return 'bg-secondary hover:bg-muted text-secondary-foreground'; // Default with text color
   };
 
   return (
@@ -41,7 +42,7 @@ const Keyboard: FC<KeyboardProps> = ({ onChar, onDelete, onEnter, keyStatuses, d
                   key={key}
                   onClick={onEnter}
                   disabled={disabled}
-                  className={cn("h-12 sm:h-14 flex-grow-[1.5] px-2 sm:px-3 text-xs sm:text-sm font-semibold uppercase", buttonClass)}
+                  className={cn("h-12 sm:h-14 flex-grow-[1.5] px-2 sm:px-3 text-xs sm:text-sm font-bold uppercase", buttonClass)}
                   aria-label="Submit guess"
                 >
                   <Send className="h-5 w-5 sm:h-6 sm:w-6 mr-1 sm:mr-2" /> Enter
@@ -54,7 +55,7 @@ const Keyboard: FC<KeyboardProps> = ({ onChar, onDelete, onEnter, keyStatuses, d
                   key={key}
                   onClick={onDelete}
                   disabled={disabled}
-                  className={cn("h-12 sm:h-14 flex-grow-[1.5] px-2 sm:px-3 text-xs sm:text-sm font-semibold uppercase", buttonClass)}
+                  className={cn("h-12 sm:h-14 flex-grow-[1.5] px-2 sm:px-3 text-xs sm:text-sm font-bold uppercase", buttonClass)}
                   aria-label="Delete last character"
                 >
                    <Delete className="h-5 w-5 sm:h-6 sm:w-6 mr-1 sm:mr-2" /> Back
@@ -66,7 +67,7 @@ const Keyboard: FC<KeyboardProps> = ({ onChar, onDelete, onEnter, keyStatuses, d
                 key={key}
                 onClick={() => onChar(key)}
                 disabled={disabled}
-                className={cn("h-12 sm:h-14 w-8 sm:w-10 flex-grow text-sm sm:text-base font-semibold uppercase", buttonClass)}
+                className={cn("h-12 sm:h-14 w-8 sm:w-10 flex-grow text-sm sm:text-base font-bold uppercase", buttonClass)}
               >
                 {key}
               </Button>
@@ -79,3 +80,4 @@ const Keyboard: FC<KeyboardProps> = ({ onChar, onDelete, onEnter, keyStatuses, d
 };
 
 export default Keyboard;
+
