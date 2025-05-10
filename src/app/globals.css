@@ -39,8 +39,8 @@ body {
     --radius: 0.5rem;
 
     /* Custom colors for Wordle tiles */
-    --tile-correct-background: hsl(var(--accent)); /* Green */
-    --tile-correct-foreground: hsl(var(--accent-foreground)); /* White text on Green */
+    --tile-correct-background: var(--accent); /* Green - Use accent directly */
+    --tile-correct-foreground: var(--accent-foreground); /* White text on Green - Use accent-foreground directly */
     --tile-present-background: 51 100% 50%; /* Gold #FFD700 - Yellow */
     --tile-present-foreground: 0 0% 10%; /* Dark text on yellow */
     --tile-absent-background: 210 10% 50%; /* Medium Gray - Gray */
@@ -96,8 +96,8 @@ body {
     --ring: 210 100% 60%;
 
     /* Custom colors for Wordle tiles in dark mode */
-    --tile-correct-background: hsl(var(--accent)); /* Green */
-    --tile-correct-foreground: hsl(var(--accent-foreground)); /* White text on Green */
+    --tile-correct-background: var(--accent); /* Green - Use accent directly */
+    --tile-correct-foreground: var(--accent-foreground); /* White text on Green - Use accent-foreground directly */
     --tile-present-background: 51 100% 50%; /* Gold #FFD700 - Yellow */
     --tile-present-foreground: 0 0% 10%; /* Dark text on yellow */
     --tile-absent-background: 210 10% 35%; /* Darker Gray */
@@ -161,3 +161,4 @@ body {
 .animate-shake {
   animation: shake 0.5s ease-in-out;
 }
+
