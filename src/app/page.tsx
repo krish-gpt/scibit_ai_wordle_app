@@ -8,7 +8,7 @@ import Keyboard from '@/components/game/Keyboard';
 import ClueDisplay from '@/components/game/ClueDisplay';
 import ResultsModal from '@/components/game/ResultsModal';
 import { Button } from '@/components/ui/button';
-import { Loader2, AlertTriangle, RotateCw } from 'lucide-react'; // Added RotateCw
+import { Loader2, AlertTriangle, RotateCw } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { generateDailyWord } from '@/ai/flows/generate-daily-word';
 import { generateClue } from '@/ai/flows/generate-clue';
@@ -49,37 +49,34 @@ const SciBitPage: FC = () => {
     setErrorMsg(null);
 
     let attempts = 0;
-    const maxAttempts = 2; // Initial attempt + 1 retry
+    const maxAttempts = 2; 
 
     while (attempts < maxAttempts) {
       attempts++;
       try {
         const today = new Date().toISOString().split('T')[0];
         const storageKey = `scibit-${today}-${difficulty}`;
-        let dailyWordData = null; // Initialize as null
+        let dailyWordData = null; 
 
-        // Attempt to load from localStorage only on the first overall attempt.
-        // If we are retrying due to a generation failure, we skip localStorage.
         if (attempts === 1) {
           const storedGame = localStorage.getItem(storageKey);
           if (storedGame) {
             try {
               dailyWordData = JSON.parse(storedGame);
-              // Validate word from localStorage
               if (!dailyWordData || !dailyWordData.word || typeof dailyWordData.word !== 'string' || dailyWordData.word.length < 3 || dailyWordData.word.length > 10) {
                 console.warn(`Stored word "${dailyWordData?.word}" has invalid length or format. Clearing and regenerating.`);
                 localStorage.removeItem(storageKey);
-                dailyWordData = null; // Force regeneration
+                dailyWordData = null; 
               }
             } catch (parseError) {
                 console.error("Error parsing stored game data:", parseError);
                 localStorage.removeItem(storageKey);
-                dailyWordData = null; // Force regeneration
+                dailyWordData = null; 
             }
           }
         }
 
-        if (!dailyWordData) { // Need to generate a new word
+        if (!dailyWordData) { 
           console.log(`Attempting to generate word (attempt ${attempts})`);
           const { word } = await generateDailyWord({ difficulty });
           if (!word || typeof word !== 'string' || word.trim() === '') {
@@ -88,25 +85,23 @@ const SciBitPage: FC = () => {
           dailyWordData = { word: word.toUpperCase(), date: today, difficulty };
         }
 
-        // Validate the (potentially new) word
         if (!dailyWordData.word || dailyWordData.word.length < 3 || dailyWordData.word.length > 10) {
           console.warn(`Generated/loaded word "${dailyWordData.word}" has invalid length (attempt ${attempts}).`);
-          localStorage.removeItem(storageKey); // Ensure bad word is not stored
+          localStorage.removeItem(storageKey); 
           if (attempts < maxAttempts) {
-            dailyWordData = null; // Ensure regeneration on next attempt
-            continue; // Try again
+            dailyWordData = null; 
+            continue; 
           } else {
             throw new Error("Generated word has an unsupported length after multiple attempts.");
           }
         }
 
-        // Word is valid, store it (or re-store if it was from localStorage and re-validated)
         localStorage.setItem(storageKey, JSON.stringify(dailyWordData));
         
         setTargetWord(dailyWordData.word);
         setWordLength(dailyWordData.word.length);
         setGameState('playing');
-        return; // Exit loop and function successfully
+        return; 
 
       } catch (error) {
         console.error(`Error during game initialization (attempt ${attempts}):`, error);
@@ -121,11 +116,8 @@ const SciBitPage: FC = () => {
                          : "Could not fetch or validate the daily word. Please try again later.",
             variant: "destructive",
           });
-          return; // Exit function with error
+          return; 
         }
-        // If not max attempts, loop will continue for another try.
-        // Add a small delay before retrying to avoid hammering the API if needed
-        // await new Promise(resolve => setTimeout(resolve, 500)); 
       }
     }
   }, [difficulty, toast]);
@@ -154,74 +146,44 @@ const SciBitPage: FC = () => {
       return;
     }
 
-    const newFeedback: LetterFeedback[] = currentGuess.split('').map((char, index) => {
-      let status: TileStatus = 'absent';
-      if (char === targetWord[index]) {
-        status = 'correct';
-      } else if (targetWord.includes(char)) {
-        // Handle duplicate letters correctly
-        const targetCharCount = targetWord.split('').filter(c => c === char).length;
-        // Count correctly placed instances of this character so far in the guess
-        let correctInstanceOfCharInGuess = 0;
-        for (let i = 0; i < targetWord.length; i++) {
-          if (targetWord[i] === char && currentGuess[i] === char) {
-            correctInstanceOfCharInGuess++;
-          }
-        }
-        
-        // Count 'present' or 'correct' instances of this char in the guess UP TO THE CURRENT POSITION
-        let presentOrCorrectInstancesBeforeCurrent = 0;
-        for (let i = 0; i < index; i++) {
-            if (currentGuess[i] === char && (targetWord[i] === char || targetWord.includes(char))) {
-                presentOrCorrectInstancesBeforeCurrent++;
-            }
-        }
-        // A character is 'present' if it's in the word, not in the correct spot,
-        // and we haven't already accounted for all instances of this char (either as 'correct' or 'present' earlier in the guess)
-        if (presentOrCorrectInstancesBeforeCurrent < targetCharCount) {
-            status = 'present';
-        }
+    const feedback: LetterFeedback[] = Array(wordLength).fill(null).map(() => ({ char: '', status: 'empty' }));
+    const targetChars = targetWord.split('');
+    const guessChars = currentGuess.split('');
+    const letterCounts: { [key: string]: number } = {};
 
+    targetChars.forEach(char => {
+      letterCounts[char] = (letterCounts[char] || 0) + 1;
+    });
 
+    // Pass 1: Identify 'correct' letters
+    for (let i = 0; i < wordLength; i++) {
+      feedback[i].char = guessChars[i];
+      if (guessChars[i] === targetChars[i]) {
+        feedback[i].status = 'correct';
+        letterCounts[guessChars[i]]--;
       }
-      return { char, status };
-    });
+    }
+
+    // Pass 2: Identify 'present' and 'absent' letters
+    for (let i = 0; i < wordLength; i++) {
+      if (feedback[i].status === 'correct') {
+        continue; 
+      }
+      // feedback[i].char is already set
+      if (targetChars.includes(guessChars[i]) && letterCounts[guessChars[i]] > 0) {
+        feedback[i].status = 'present';
+        letterCounts[guessChars[i]]--;
+      } else {
+        feedback[i].status = 'absent';
+      }
+    }
     
-    // Refine "present" status to avoid over-counting for multiple letters
-    const refinedFeedback = [...newFeedback];
-    const targetWordChars = targetWord.split('');
-
-    currentGuess.split('').forEach((guessChar, guessIdx) => {
-        if (refinedFeedback[guessIdx].status === 'present') {
-            let targetCharOccurrences = targetWordChars.filter(tc => tc === guessChar).length;
-            let correctOccurrencesInGuess = 0;
-            let presentOccurrencesInGuess = 0;
-
-            for(let i = 0; i < wordLength; i++) {
-                if (currentGuess[i] === guessChar && targetWordChars[i] === guessChar) {
-                    correctOccurrencesInGuess++;
-                }
-            }
-            for(let i = 0; i < guessIdx; i++) { // count presents up to current
-                if (refinedFeedback[i].char === guessChar && refinedFeedback[i].status === 'present') {
-                    presentOccurrencesInGuess++;
-                }
-            }
-            if (presentOccurrencesInGuess >= (targetCharOccurrences - correctOccurrencesInGuess) ) {
-                 refinedFeedback[guessIdx].status = 'absent';
-            }
-        }
-    });
-
-
-    const newGuesses = [...guesses, { letters: refinedFeedback, isSubmitted: true }];
+    const newGuesses = [...guesses, { letters: feedback, isSubmitted: true }];
     setGuesses(newGuesses);
 
-    // Update key statuses
     const newKeyStatuses = { ...keyStatuses };
-    refinedFeedback.forEach(({ char, status }) => {
+    feedback.forEach(({ char, status }) => {
       const upperChar = char.toUpperCase();
-      // Prioritize 'correct' > 'present' > 'absent'
       if (status === 'correct') {
         newKeyStatuses[upperChar] = 'correct';
       } else if (status === 'present' && newKeyStatuses[upperChar] !== 'correct') {
@@ -264,7 +226,7 @@ const SciBitPage: FC = () => {
       if (gameState !== 'playing' || (gameState === 'won' || gameState === 'lost')) return; 
 
       const key = event.key.toUpperCase();
-      if (event.metaKey || event.ctrlKey || event.altKey) return; // Ignore modified key presses
+      if (event.metaKey || event.ctrlKey || event.altKey) return;
 
       if (key === 'ENTER') {
         handleEnter();
