@@ -26,8 +26,8 @@ body {
     --muted: 210 15% 88%; /* Muted gray */
     --muted-foreground: 210 10% 45%;
 
-    --accent: 80 61% 50%; /* #9ACD32 Yellow-Green for CORRECT tiles */
-    --accent-foreground: 0 0% 100%; /* White text on accent (Yellow-Green) */
+    --accent: 120 60% 40%; /* Green for CORRECT tiles */
+    --accent-foreground: 0 0% 100%; /* White text on accent (Green) */
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
@@ -39,8 +39,8 @@ body {
     --radius: 0.5rem;
 
     /* Custom colors for Wordle tiles */
-    --tile-correct-background: hsl(var(--accent)); /* Yellow-Green */
-    --tile-correct-foreground: hsl(var(--accent-foreground)); /* White text on Yellow-Green */
+    --tile-correct-background: hsl(var(--accent)); /* Green */
+    --tile-correct-foreground: hsl(var(--accent-foreground)); /* White text on Green */
     --tile-present-background: 51 100% 50%; /* Gold #FFD700 - Yellow */
     --tile-present-foreground: 0 0% 10%; /* Dark text on yellow */
     --tile-absent-background: 210 10% 50%; /* Medium Gray - Gray */
@@ -85,8 +85,8 @@ body {
     --muted: 210 10% 20%;
     --muted-foreground: 210 10% 55%;
 
-    --accent: 80 61% 50%; /* #9ACD32 Yellow-Green for CORRECT tiles in dark mode */
-    --accent-foreground: 0 0% 100%; /* White text on accent (Yellow-Green) in dark mode */
+    --accent: 120 60% 50%; /* Green for CORRECT tiles in dark mode */
+    --accent-foreground: 0 0% 100%; /* White text on accent (Green) in dark mode */
 
     --destructive: 0 70% 50%;
     --destructive-foreground: 0 0% 98%;
@@ -96,8 +96,8 @@ body {
     --ring: 210 100% 60%;
 
     /* Custom colors for Wordle tiles in dark mode */
-    --tile-correct-background: hsl(var(--accent)); /* Yellow-Green */
-    --tile-correct-foreground: hsl(var(--accent-foreground)); /* White text on Yellow-Green */
+    --tile-correct-background: hsl(var(--accent)); /* Green */
+    --tile-correct-foreground: hsl(var(--accent-foreground)); /* White text on Green */
     --tile-present-background: 51 100% 50%; /* Gold #FFD700 - Yellow */
     --tile-present-foreground: 0 0% 10%; /* Dark text on yellow */
     --tile-absent-background: 210 10% 35%; /* Darker Gray */
