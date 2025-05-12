@@ -43,3 +43,6 @@ next-env.d.ts
 # firebase
 firebase-debug.log
 firestore-debug.log
+
+#secrets
+scibit-f1chc-135ae1655c1a.json

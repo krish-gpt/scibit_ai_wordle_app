@@ -9,38 +9,31 @@
  * - GenerateClueOutput - The return type for the generateClue function.
  */
 
-import {ai} from '@/ai/genkit';
+import {getAI} from '@/ai/genkit';
 import {z} from 'genkit';
 
 const GenerateClueInputSchema = z.object({
   term: z.string().describe('The AI term of the day.'),
 });
 export type GenerateClueInput = z.infer<typeof GenerateClueInputSchema>;
+export type GenerateClueOutput = {
+  clue: string;
+};
 
-const GenerateClueOutputSchema = z.object({
-  clue: z.string().describe('A clue for the AI term of the day.'),
-});
-export type GenerateClueOutput = z.infer<typeof GenerateClueOutputSchema>;
-
-export async function generateClue(input: GenerateClueInput): Promise<GenerateClueOutput> {
-  return generateClueFlow(input);
+export async function generateClue(
+  input: GenerateClueInput,
+): Promise<GenerateClueOutput> {
+  const ai = await getAI();
+  const prompt = `Generate a clue for the AI term: ${input.term}. 
+    The clue should be short (1-2 sentences), helpful for guessing the word, but not too obvious.
+    The clue should focus on the term's meaning or usage in AI/ML without directly stating the word.
+    Example clues:
+    - For "BIAS": "This statistical tendency can unfairly influence model predictions."
+    - For "EPOCH": "In training, this represents one complete pass through the entire dataset."
+    - For "NEURAL": "These biological-inspired connections form the foundation of deep learning."`;
+  
+  const response = await ai.generate(prompt);
+  return {
+    clue: response.text.trim()
+  };
 }
-
-const prompt = ai.definePrompt({
-  name: 'generateCluePrompt',
-  input: {schema: GenerateClueInputSchema},
-  output: {schema: GenerateClueOutputSchema},
-  prompt: `Generate a clue for the AI term: {{{term}}}. The clue should be short and helpful, but not too obvious.`,
-});
-
-const generateClueFlow = ai.defineFlow(
-  {
-    name: 'generateClueFlow',
-    inputSchema: GenerateClueInputSchema,
-    outputSchema: GenerateClueOutputSchema,
-  },
-  async input => {
-    const {output} = await prompt(input);
-    return output!;
-  }
-);
