@@ -8,7 +8,7 @@
  * - GenerateTermSummaryOutput - The return type for the generateTermSummary function.
  */
 
-import {ai} from '@/ai/genkit';
+import {getAI} from '@/ai/genkit';
 import {z} from 'genkit';
 
 const GenerateTermSummaryInputSchema = z.object({
@@ -23,27 +23,17 @@ const GenerateTermSummaryOutputSchema = z.object({
 export type GenerateTermSummaryOutput = z.infer<typeof GenerateTermSummaryOutputSchema>;
 
 export async function generateTermSummary(input: GenerateTermSummaryInput): Promise<GenerateTermSummaryOutput> {
-  return generateTermSummaryFlow(input);
-}
-
-const prompt = ai.definePrompt({
-  name: 'generateTermSummaryPrompt',
-  input: {schema: GenerateTermSummaryInputSchema},
-  output: {schema: GenerateTermSummaryOutputSchema},
-  prompt: `You are an AI expert. Please provide a concise summary of the following AI term, explaining its meaning and significance:\n\nTerm: {{{term}}}`,
-});
-
-const generateTermSummaryFlow = ai.defineFlow(
-  {
-    name: 'generateTermSummaryFlow',
-    inputSchema: GenerateTermSummaryInputSchema,
-    outputSchema: GenerateTermSummaryOutputSchema,
-  },
-  async input => {
-    const {output} = await prompt(input);
+  try {
+    const ai = await getAI();
+    const prompt = `You are an AI expert. Please provide a concise summary of the following AI term, explaining its meaning and significance:\n\nTerm: ${input.term}`;
+    
+    const response = await ai.generate(prompt);
     return {
-      ...output!,
+      summary: response.text.trim(),
       progress: 'Generated a summary of the AI term.',
     };
+  } catch (error) {
+    console.error('Error generating term summary:', error);
+    throw error;
   }
-);
+}
