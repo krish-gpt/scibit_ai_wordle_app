@@ -5,6 +5,7 @@ import { z } from 'genkit';
 import { DailyGame, DailyGameClues, DailyGameSummary, Difficulty } from '@/lib/firebase/types';
 import { storeDailyGame, getDailyGame } from '@/lib/firebase/dailyGame';
 import { getFallbackWord, getFallbackContent } from '@/lib/utils/fallback';
+import { Timestamp } from 'firebase/firestore';
 
 const GenerateDailyGameInputSchema = z.object({
   difficulty: z
@@ -138,15 +139,20 @@ export async function generateDailyGame(
   input: GenerateDailyGameInput,
 ): Promise<DailyGame | null> {
   try {
-    // Check if game already exists
-    const existingGame = await getDailyGame(input.date);
-    if (existingGame) {
-      return existingGame;
+    // Try to get from Firebase first
+    try {
+      const existingGame = await getDailyGame(input.date);
+      if (existingGame) {
+        return existingGame;
+      }
+    } catch (dbError) {
+      console.warn('Firebase access failed, falling back to direct generation:', dbError);
+      // Continue with generation if Firebase fails
     }
 
     console.log('Generating new game content...');
 
-    // Generate new game content with fallbacks
+    // Generate new game content
     const word = await generateWord(input.difficulty, input.date);
     console.log('Generated word:', word);
     
@@ -156,16 +162,28 @@ export async function generateDailyGame(
     const summary = await generateSummary(word);
     console.log('Generated summary successfully');
 
-    // Store in Firebase
-    const result = await storeDailyGame(input.date, {
-      word,
-      difficulty: input.difficulty,
-      clues,
-      summary
-    });
-
-    console.log('Stored game in Firebase successfully');
-    return result.data || null;
+    // Try to store in Firebase, but don't fail if it doesn't work
+    try {
+      const result = await storeDailyGame(input.date, {
+        word,
+        difficulty: input.difficulty,
+        clues,
+        summary
+      });
+      console.log('Stored game in Firebase successfully');
+      return result.data || null;
+    } catch (storeError) {
+      console.warn('Failed to store in Firebase, returning generated content:', storeError);
+      // Return the generated content even if storage fails
+      return {
+        word,
+        difficulty: input.difficulty,
+        clues,
+        summary,
+        targetDate: Timestamp.fromDate(new Date(input.date)),
+        createdAt: Timestamp.now()
+      };
+    }
   } catch (error: any) {
     console.error('Error generating daily game:', error);
     
@@ -175,12 +193,24 @@ export async function generateDailyGame(
     
     if (fallbackContent) {
       console.log('Using fallback content for word:', fallbackWord);
-      const result = await storeDailyGame(input.date, {
-        word: fallbackWord,
-        difficulty: input.difficulty,
-        ...fallbackContent
-      });
-      return result.data || null;
+      try {
+        const result = await storeDailyGame(input.date, {
+          word: fallbackWord,
+          difficulty: input.difficulty,
+          ...fallbackContent
+        });
+        return result.data || null;
+      } catch (storeError) {
+        console.warn('Failed to store fallback in Firebase, returning fallback content:', storeError);
+        // Return the fallback content even if storage fails
+        return {
+          word: fallbackWord,
+          difficulty: input.difficulty,
+          ...fallbackContent,
+          targetDate: Timestamp.fromDate(new Date(input.date)),
+          createdAt: Timestamp.now()
+        };
+      }
     }
     
     throw new Error(`Failed to generate daily game: ${error?.message || 'Unknown error'}`);
