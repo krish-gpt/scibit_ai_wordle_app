@@ -10,7 +10,8 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "test:clue": "cross-env GOOGLE_CLOUD_PROJECT=scibit-f1chc GOOGLE_APPLICATION_CREDENTIALS=./scibit-f1chc-135ae1655c1a.json tsx src/ai/test-clue.ts"
+    "test:clue": "cross-env GOOGLE_CLOUD_PROJECT=scibit-f1chc GOOGLE_APPLICATION_CREDENTIALS=./scibit-f1chc-135ae1655c1a.json tsx src/ai/test-clue.ts",
+    "test:term-summary": "cross-env GOOGLE_CLOUD_PROJECT=scibit-f1chc GOOGLE_APPLICATION_CREDENTIALS=./scibit-f1chc-135ae1655c1a.json tsx src/ai/test-term-summary.ts"
   },
   "dependencies": {
     "@genkit-ai/googleai": "^1.8.0",
