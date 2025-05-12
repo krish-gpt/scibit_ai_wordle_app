@@ -10,9 +10,7 @@ import ResultsModal from '@/components/game/ResultsModal';
 import { Button } from '@/components/ui/button';
 import { Loader2, AlertTriangle, RotateCw } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
-import { generateDailyWord } from '@/ai/flows/generate-daily-word';
-import { generateClue } from '@/ai/flows/generate-clue';
-import { generateTermSummary } from '@/ai/flows/generate-term-summary';
+import { generateDailyGame } from '@/ai/flows/generate-daily-game';
 import type { GuessFeedback, KeyStatus, LetterFeedback } from '@/lib/types';
 
 const MAX_GUESSES = 6;
@@ -44,100 +42,98 @@ const SciBitPage: FC = () => {
     setGuesses([]);
     setCurrentGuess('');
     setClue(null);
-    setIsClueLoading(true); // Start loading clue early
+    setIsClueLoading(true);
     setTermSummary(null);
     setKeyStatuses({});
     setErrorMsg(null);
 
     let attempts = 0;
-    const maxAttempts = 2; 
+    const maxAttempts = 2;
 
     while (attempts < maxAttempts) {
       attempts++;
       try {
         const today = new Date().toISOString().split('T')[0];
         const storageKey = `scibit-${today}-${difficulty}`;
-        let dailyWordData = null; 
+        let gameData = null;
 
         if (attempts === 1) {
           const storedGame = localStorage.getItem(storageKey);
           if (storedGame) {
             try {
-              dailyWordData = JSON.parse(storedGame);
-              if (!dailyWordData || !dailyWordData.word || typeof dailyWordData.word !== 'string' || dailyWordData.word.length < 3 || dailyWordData.word.length > 10) {
-                console.warn(`Stored word "${dailyWordData?.word}" has invalid length or format. Clearing and regenerating.`);
+              gameData = JSON.parse(storedGame);
+              if (!gameData?.word || typeof gameData.word !== 'string' || 
+                  gameData.word.length < 3 || gameData.word.length > 10) {
+                console.warn(`Stored word "${gameData?.word}" has invalid length or format. Clearing and regenerating.`);
                 localStorage.removeItem(storageKey);
-                dailyWordData = null; 
+                gameData = null;
               }
             } catch (parseError) {
-                console.error("Error parsing stored game data:", parseError);
-                localStorage.removeItem(storageKey);
-                dailyWordData = null; 
+              console.error("Error parsing stored game data:", parseError);
+              localStorage.removeItem(storageKey);
+              gameData = null;
             }
           }
         }
 
-        if (!dailyWordData) { 
-          console.log(`Attempting to generate word (attempt ${attempts})`);
-          const { word } = await generateDailyWord({ difficulty });
-          if (!word || typeof word !== 'string' || word.trim() === '') {
-            throw new Error("AI failed to generate a valid word string.");
+        if (!gameData) {
+          console.log(`Attempting to generate game (attempt ${attempts})`);
+          const dailyGame = await generateDailyGame({ 
+            difficulty,
+            date: today
+          });
+          
+          if (!dailyGame?.word || typeof dailyGame.word !== 'string' || dailyGame.word.trim() === '') {
+            throw new Error("Failed to generate a valid word.");
           }
-          dailyWordData = { word: word.toUpperCase(), date: today, difficulty };
+
+          gameData = {
+            word: dailyGame.word.toUpperCase(),
+            date: today,
+            difficulty,
+            clue: dailyGame.clues.technical, // Using technical clue as primary
+            summary: `${dailyGame.summary.definition}\n\n${dailyGame.summary.importance}\n\nExamples:\n${dailyGame.summary.examples.join('\n')}`
+          };
         }
 
-        if (!dailyWordData.word || dailyWordData.word.length < 3 || dailyWordData.word.length > 10) {
-          console.warn(`Generated/loaded word "${dailyWordData.word}" has invalid length (attempt ${attempts}).`);
-          localStorage.removeItem(storageKey); 
+        if (!gameData.word || gameData.word.length < 3 || gameData.word.length > 10) {
+          console.warn(`Generated/loaded word "${gameData.word}" has invalid length (attempt ${attempts}).`);
+          localStorage.removeItem(storageKey);
           if (attempts < maxAttempts) {
-            dailyWordData = null; 
-            continue; 
+            gameData = null;
+            continue;
           } else {
             throw new Error("Generated word has an unsupported length after multiple attempts.");
           }
         }
 
-        localStorage.setItem(storageKey, JSON.stringify(dailyWordData));
+        localStorage.setItem(storageKey, JSON.stringify(gameData));
         
-        setTargetWord(dailyWordData.word);
-        setWordLength(dailyWordData.word.length);
-
-        // Fetch clue immediately after setting the target word
-        if (dailyWordData.word) {
-          generateClue({ term: dailyWordData.word })
-            .then(clueData => {
-                setClue(clueData.clue);
-            })
-            .catch(err => {
-                console.error("Error fetching initial clue:", err);
-                setClue("Could not load the clue at this moment.");
-                toast({ title: "Clue Error", description: "Could not fetch the clue.", variant: "destructive" });
-            })
-            .finally(() => {
-                setIsClueLoading(false);
-            });
-        } else {
-            setIsClueLoading(false); // No word, so not loading clue
+        setTargetWord(gameData.word);
+        setWordLength(gameData.word.length);
+        setClue(gameData.clue);
+        setIsClueLoading(false);
+        
+        if (gameData.summary) {
+          setTermSummary(gameData.summary);
         }
         
         setGameState('playing');
-        return; 
+        return;
 
       } catch (error) {
         console.error(`Error during game initialization (attempt ${attempts}):`, error);
-        setIsClueLoading(false); // Stop clue loading on error
+        setIsClueLoading(false);
         if (attempts >= maxAttempts) {
           const message = error instanceof Error ? error.message : "Failed to load the game. Please try refreshing the page.";
           setErrorMsg(message);
           setGameState('error');
           toast({
             title: "Error",
-            description: message === "AI failed to generate a valid word string." || message === "Generated word has an unsupported length after multiple attempts." 
-                         ? message 
-                         : "Could not fetch or validate the daily word. Please try again later.",
+            description: "Could not fetch or validate the daily word. Please try again later.",
             variant: "destructive",
           });
-          return; 
+          return;
         }
       }
     }
@@ -227,26 +223,14 @@ const SciBitPage: FC = () => {
       setGameState('won');
       toast({ title: "You Won!", description: "Congratulations!", className: "bg-tile-correct-background text-tile-correct-foreground" });
       setIsSummaryLoading(true);
-      generateTermSummary({ term: targetWord })
-        .then(summaryData => setTermSummary(summaryData.summary))
-        .catch(err => {
-            console.error("Error fetching summary:", err);
-            setTermSummary("Could not load summary.");
-        })
-        .finally(() => setIsSummaryLoading(false));
+      setTermSummary(termSummary);
     } else if (newGuesses.length >= MAX_GUESSES) {
       setGameState('lost');
       toast({ title: "Game Over", description: `The word was ${targetWord}.`, variant: "destructive" });
       setIsSummaryLoading(true);
-      generateTermSummary({ term: targetWord })
-        .then(summaryData => setTermSummary(summaryData.summary))
-        .catch(err => {
-            console.error("Error fetching summary:", err);
-            setTermSummary("Could not load summary.");
-        })
-        .finally(() => setIsSummaryLoading(false));
+      setTermSummary(termSummary);
     }
-  }, [gameState, currentGuess, wordLength, targetWord, guesses, toast, keyStatuses]);
+  }, [gameState, currentGuess, wordLength, targetWord, guesses, toast, keyStatuses, termSummary]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
