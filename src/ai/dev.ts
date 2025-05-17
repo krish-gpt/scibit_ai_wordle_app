@@ -1,9 +1,8 @@
 import { config } from 'dotenv';
+
+// Load environment variables
 config();
 
-import '@/ai/flows/generate-daily-game.ts';
+// Import the consolidated game generation flow
+import '@/ai/flows/generate-daily-game';
 
-// Remove old imports as they're now consolidated
-// import '@/ai/flows/generate-daily-word.ts';
-// import '@/ai/flows/generate-clue.ts';
-// import '@/ai/flows/generate-term-summary.ts';

@@ -54,51 +54,28 @@ const SciBitPage: FC = () => {
       attempts++;
       try {
         const today = new Date().toISOString().split('T')[0];
-        const storageKey = `scibit-${today}-${difficulty}`;
         let gameData = null;
 
-        if (attempts === 1) {
-          const storedGame = localStorage.getItem(storageKey);
-          if (storedGame) {
-            try {
-              gameData = JSON.parse(storedGame);
-              if (!gameData?.word || typeof gameData.word !== 'string' || 
-                  gameData.word.length < 3 || gameData.word.length > 10) {
-                console.warn(`Stored word "${gameData?.word}" has invalid length or format. Clearing and regenerating.`);
-                localStorage.removeItem(storageKey);
-                gameData = null;
-              }
-            } catch (parseError) {
-              console.error("Error parsing stored game data:", parseError);
-              localStorage.removeItem(storageKey);
-              gameData = null;
-            }
-          }
+        // First try to get the game from Firestore
+        const dailyGame = await generateDailyGame({ 
+          difficulty,
+          date: today
+        });
+        
+        if (!dailyGame?.word || typeof dailyGame.word !== 'string' || dailyGame.word.trim() === '') {
+          throw new Error("Failed to generate a valid word.");
         }
 
-        if (!gameData) {
-          console.log(`Attempting to generate game (attempt ${attempts})`);
-          const dailyGame = await generateDailyGame({ 
-            difficulty,
-            date: today
-          });
-          
-          if (!dailyGame?.word || typeof dailyGame.word !== 'string' || dailyGame.word.trim() === '') {
-            throw new Error("Failed to generate a valid word.");
-          }
-
-          gameData = {
-            word: dailyGame.word.toUpperCase(),
-            date: today,
-            difficulty,
-            clue: dailyGame.clues.technical, // Using technical clue as primary
-            summary: `${dailyGame.summary.definition}\n\n${dailyGame.summary.importance}\n\nExamples:\n${dailyGame.summary.examples.join('\n')}`
-          };
-        }
+        gameData = {
+          word: dailyGame.word.toUpperCase(),
+          date: today,
+          difficulty,
+          clue: dailyGame.clue || '', // Using the clue directly
+          summary: dailyGame.summary || ''
+        };
 
         if (!gameData.word || gameData.word.length < 3 || gameData.word.length > 10) {
-          console.warn(`Generated/loaded word "${gameData.word}" has invalid length (attempt ${attempts}).`);
-          localStorage.removeItem(storageKey);
+          console.warn(`Generated word "${gameData.word}" has invalid length (attempt ${attempts}).`);
           if (attempts < maxAttempts) {
             gameData = null;
             continue;
@@ -106,8 +83,6 @@ const SciBitPage: FC = () => {
             throw new Error("Generated word has an unsupported length after multiple attempts.");
           }
         }
-
-        localStorage.setItem(storageKey, JSON.stringify(gameData));
         
         setTargetWord(gameData.word);
         setWordLength(gameData.word.length);

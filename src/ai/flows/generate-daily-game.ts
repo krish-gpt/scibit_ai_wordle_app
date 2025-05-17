@@ -14,6 +14,15 @@ const GenerateDailyGameInputSchema = z.object({
   date: z.string().describe('The target date for the game in YYYY-MM-DD format'),
 });
 
+// Document structure matching test
+interface DailyGameDocument {
+  word: string;
+  difficulty: Difficulty;
+  clue: string;
+  summary: string;
+  createdAt: Timestamp;
+}
+
 const CluesSchema = z.object({
   technical: z.string().max(100),
   contextual: z.string().max(100),
@@ -29,190 +38,129 @@ const SummarySchema = z.object({
 export type GenerateDailyGameInput = z.infer<typeof GenerateDailyGameInputSchema>;
 
 async function generateWord(difficulty: Difficulty, date: string): Promise<string> {
-  try {
-    const ai = await getAI();
-    const prompt = `Generate a single ${difficulty} AI-related term for a Wordle-like game. 
-      The word should be between 4-8 letters and be commonly used in AI/ML discussions.
-      Return only the word in uppercase, nothing else.
-      Examples: BIAS, EPOCH, NEURAL, TENSOR`;
-    
-    const response = await ai.generate(prompt);
-    const word = response.text.trim().toUpperCase();
-    
-    // Validate word length and format
-    if (!/^[A-Z]{4,8}$/.test(word)) {
-      throw new Error(`Invalid word generated: ${word}. Must be 4-8 uppercase letters.`);
-    }
-    
-    return word;
-  } catch (error) {
-    console.warn('Failed to generate word, using fallback:', error);
-    return getFallbackWord(difficulty, date);
+  const ai = await getAI();
+  const prompt = `Generate a single ${difficulty} AI-related term for a Wordle-like game. 
+    The word should be between 4-8 letters and be commonly used in AI/ML discussions.
+    Return only the word in uppercase, nothing else.
+    Examples: BIAS, EPOCH, NEURAL, TENSOR`;
+  
+  const response = await ai.generate(prompt);
+  const word = response.text.trim().toUpperCase();
+  
+  // Validate word length and format
+  if (!/^[A-Z]{4,8}$/.test(word)) {
+    throw new Error(`Invalid word generated: ${word}. Must be 4-8 uppercase letters.`);
   }
+  
+  return word;
 }
 
-async function generateClues(word: string, maxRetries = 3): Promise<DailyGameClues> {
-  try {
-    const ai = await getAI();
-    // Enhanced prompt combining both styles
-    const prompt = `You are an AI expert. Generate three different types of clues for the AI term "${word}":
-      1. Technical: A technical description of the concept (like "These biological-inspired connections form the foundation of deep learning")
-      2. Contextual: How it's used in practice (like "In training, this represents one complete pass through the entire dataset")
-      3. Historical: Its historical context or development (like "This statistical tendency was first recognized as a major challenge in the 1950s")
-      
-      Each clue should be:
-      - Short (1-2 sentences)
-      - Helpful for guessing but not too obvious
-      - Focus on meaning/usage without directly stating the word
-      - Under 100 characters
-      
-      Format the response as JSON with keys: technical, contextual, historical`;
+async function generateClues(word: string): Promise<string> {
+  const ai = await getAI();
+  const prompt = `You are an AI expert. Generate a concise clue for the AI term "${word}".
+    The clue should be:
+    - Short (1-2 sentences)
+    - Helpful for guessing but not too obvious
+    - Focus on meaning/usage without directly stating the word
+    - Under 100 characters
     
-    let lastError: Error | null = null;
-    
-    for (let i = 0; i < maxRetries; i++) {
-      try {
-        const response = await ai.generate(prompt);
-        const parsed = JSON.parse(response.text);
-        const validated = CluesSchema.parse(parsed);
-        console.log('Generated clues successfully');
-        return validated;
-      } catch (error) {
-        lastError = error as Error;
-        console.warn(`Attempt ${i + 1} failed to generate valid clues:`, error);
-        continue;
-      }
-    }
-    
-    throw lastError;
-  } catch (error) {
-    console.warn('Failed to generate clues, using fallback:', error);
-    return getFallbackContent(word)?.clues || {
-      technical: `Technical concept in AI/ML: ${word}`,
-      contextual: `Used in machine learning applications`,
-      historical: `Important development in AI history`
-    };
-  }
+    Return just the clue text.`;
+  
+  const response = await ai.generate(prompt);
+  return response.text.trim();
 }
 
-async function generateSummary(word: string, maxRetries = 3): Promise<DailyGameSummary> {
-  try {
-    const ai = await getAI();
-    // Enhanced prompt with expert context
-    const prompt = `You are an AI expert. For the AI/ML term "${word}", generate a comprehensive but concise summary with:
-      1. A clear definition that an AI practitioner would understand
-      2. Why it's important in modern AI/ML development
-      3. 2-3 concrete real-world examples of its application
-      
-      Keep the explanation technical but accessible.
-      Format the response as JSON with keys: definition, importance, examples (array)
-      Keep each field concise but informative.`;
+async function generateSummary(word: string): Promise<string> {
+  const ai = await getAI();
+  const prompt = `You are an AI expert. For the AI/ML term "${word}", generate a concise summary that:
+    1. Explains what it is
+    2. Why it's important in AI/ML
+    3. How it's used
     
-    let lastError: Error | null = null;
-    
-    for (let i = 0; i < maxRetries; i++) {
-      try {
-        const response = await ai.generate(prompt);
-        const parsed = JSON.parse(response.text);
-        const validated = SummarySchema.parse(parsed);
-        console.log('Generated summary successfully');
-        return validated;
-      } catch (error) {
-        lastError = error as Error;
-        console.warn(`Attempt ${i + 1} failed to generate valid summary:`, error);
-        continue;
-      }
-    }
-    
-    throw lastError;
-  } catch (error) {
-    console.warn('Failed to generate summary, using fallback:', error);
-    return getFallbackContent(word)?.summary || {
-      definition: `${word} is an AI/ML concept`,
-      importance: `Essential for modern machine learning systems`,
-      examples: [`Used in various AI applications`]
-    };
-  }
+    Keep it under 200 characters total.
+    Return just the summary text.`;
+  
+  const response = await ai.generate(prompt);
+  return response.text.trim();
 }
 
 export async function generateDailyGame(
   input: GenerateDailyGameInput,
-): Promise<DailyGame | null> {
+): Promise<DailyGameDocument | null> {
   try {
-    // Try to get from Firebase first
+    // Use the date format as-is since Firestore expects YYYY-MM-DD
+    const firestoreDate = input.date;
+    console.log(`Using date format: ${firestoreDate}`);
+
+    // 1. First try to get complete game from Firebase
     try {
-      const existingGame = await getDailyGame(input.date);
+      const existingGame = await getDailyGame(firestoreDate);
       if (existingGame) {
-        return existingGame;
+        console.log(`Found existing game in Firebase for date ${firestoreDate}`);
+        return existingGame as unknown as DailyGameDocument;
       }
     } catch (dbError) {
-      console.warn('Firebase access failed, falling back to direct generation:', dbError);
+      console.warn(`Firebase access failed for date ${firestoreDate}:`, dbError);
       // Continue with generation if Firebase fails
     }
 
-    console.log('Generating new game content...');
-
-    // Generate new game content
-    const word = await generateWord(input.difficulty, input.date);
-    console.log('Generated word:', word);
-    
-    const clues = await generateClues(word);
-    console.log('Generated clues successfully');
-    
-    const summary = await generateSummary(word);
-    console.log('Generated summary successfully');
-
-    // Try to store in Firebase, but don't fail if it doesn't work
+    // 2. Generate all components using AI
     try {
-      const result = await storeDailyGame(input.date, {
+      console.log(`Generating new game content for date ${firestoreDate}`);
+      
+      // Generate all components - pass firestoreDate to ensure consistency
+      const word = await generateWord(input.difficulty, firestoreDate);
+      const clue = await generateClues(word);
+      const summary = await generateSummary(word);
+
+      const gameData: DailyGameDocument = {
         word,
         difficulty: input.difficulty,
-        clues,
-        summary
-      });
-      console.log('Stored game in Firebase successfully');
-      return result.data || null;
-    } catch (storeError) {
-      console.warn('Failed to store in Firebase, returning generated content:', storeError);
-      // Return the generated content even if storage fails
-      return {
-        word,
-        difficulty: input.difficulty,
-        clues,
+        clue,
         summary,
-        targetDate: Timestamp.fromDate(new Date(input.date)),
         createdAt: Timestamp.now()
       };
-    }
-  } catch (error: any) {
-    console.error('Error generating daily game:', error);
-    
-    // Ultimate fallback: Use predefined content
-    const fallbackWord = getFallbackWord(input.difficulty, input.date);
-    const fallbackContent = getFallbackContent(fallbackWord);
-    
-    if (fallbackContent) {
-      console.log('Using fallback content for word:', fallbackWord);
+
+      // Store complete AI-generated game
       try {
-        const result = await storeDailyGame(input.date, {
-          word: fallbackWord,
-          difficulty: input.difficulty,
-          ...fallbackContent
-        });
-        return result.data || null;
+        const result = await storeDailyGame(firestoreDate, gameData as unknown as DailyGame);
+        console.log(`Stored AI-generated game in Firebase for date ${firestoreDate}`);
+        return result.data as unknown as DailyGameDocument || gameData;
       } catch (storeError) {
-        console.warn('Failed to store fallback in Firebase, returning fallback content:', storeError);
-        // Return the fallback content even if storage fails
-        return {
-          word: fallbackWord,
-          difficulty: input.difficulty,
-          ...fallbackContent,
-          targetDate: Timestamp.fromDate(new Date(input.date)),
-          createdAt: Timestamp.now()
-        };
+        console.warn(`Failed to store AI-generated game in Firebase for date ${firestoreDate}:`, storeError);
+        return gameData;
+      }
+    } catch (aiError) {
+      console.warn(`AI generation failed for date ${firestoreDate}, using fallback content:`, aiError);
+      
+      // 3. Use fallback as last resort
+      const fallbackWord = getFallbackWord(input.difficulty, firestoreDate); // Use firestoreDate here too
+      const fallbackContent = getFallbackContent(fallbackWord);
+      
+      if (!fallbackContent) {
+        throw new Error('No fallback content available');
+      }
+
+      const fallbackGameData: DailyGameDocument = {
+        word: fallbackWord,
+        difficulty: input.difficulty,
+        clue: 'Fallback clue for ' + fallbackWord,
+        summary: 'Fallback summary for ' + fallbackWord,
+        createdAt: Timestamp.now()
+      };
+
+      // Try to store fallback content
+      try {
+        const result = await storeDailyGame(firestoreDate, fallbackGameData as unknown as DailyGame);
+        console.log(`Stored fallback game in Firebase for date ${firestoreDate}`);
+        return result.data as unknown as DailyGameDocument || fallbackGameData;
+      } catch (storeError) {
+        console.warn(`Failed to store fallback game in Firebase for date ${firestoreDate}:`, storeError);
+        return fallbackGameData;
       }
     }
-    
+  } catch (error: any) {
+    console.error('Fatal error in game generation:', error);
     throw new Error(`Failed to generate daily game: ${error?.message || 'Unknown error'}`);
   }
 } 
