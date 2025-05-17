@@ -43,6 +43,7 @@ const GameBoard: FC<GameBoardProps> = ({ guesses, currentGuess, wordLength, maxG
                   isRevealing={!!guessFeedback?.isSubmitted}
                   isCurrentRow={isCurrentRow}
                   isSubmitted={!!guessFeedback?.isSubmitted}
+                  index={charIndex}
                 />
               );
             })}

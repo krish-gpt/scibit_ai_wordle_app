@@ -37,6 +37,15 @@ const SciBitPage: FC = () => {
 
   const { toast } = useToast();
 
+  // Function to get today's date in YYYY-MM-DD format, using UTC to ensure consistency
+  const getTodayDate = useCallback(() => {
+    const now = new Date();
+    const year = now.getUTCFullYear();
+    const month = String(now.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(now.getUTCDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }, []);
+
   const initializeGame = useCallback(async () => {
     setGameState('loading');
     setGuesses([]);
@@ -53,7 +62,7 @@ const SciBitPage: FC = () => {
     while (attempts < maxAttempts) {
       attempts++;
       try {
-        const today = new Date().toISOString().split('T')[0];
+        const today = getTodayDate();
         let gameData = null;
 
         // First try to get the game from Firestore
@@ -96,23 +105,20 @@ const SciBitPage: FC = () => {
         setGameState('playing');
         return;
 
-      } catch (error) {
-        console.error(`Error during game initialization (attempt ${attempts}):`, error);
-        setIsClueLoading(false);
+      } catch (error: any) {
+        console.error('Error initializing game:', error);
         if (attempts >= maxAttempts) {
-          const message = error instanceof Error ? error.message : "Failed to load the game. Please try refreshing the page.";
-          setErrorMsg(message);
           setGameState('error');
+          setErrorMsg(error?.message || "Failed to initialize game. Please try again.");
           toast({
             title: "Error",
-            description: "Could not fetch or validate the daily word. Please try again later.",
-            variant: "destructive",
+            description: "Failed to initialize game. Please try again.",
+            variant: "destructive"
           });
-          return;
         }
       }
     }
-  }, [difficulty, toast]);
+  }, [difficulty, toast, getTodayDate]);
 
   useEffect(() => {
     initializeGame();
@@ -209,7 +215,7 @@ const SciBitPage: FC = () => {
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (gameState !== 'playing' || (gameState === 'won' || gameState === 'lost')) return; 
+      if (gameState !== 'playing') return; 
 
       const key = event.key.toUpperCase();
       if (event.metaKey || event.ctrlKey || event.altKey) return;

@@ -40,12 +40,13 @@ next-env.d.ts
 .genkit/*
 
 # environment variables
-# .env
-# .env.*
-# .env.local
-# .env.development
-# .env.test
-# .env.production
+.env
+.env.*
+.env.local
+.env.development
+.env.test
+.env.production
+.env.example
 
 # firebase
 firebase-debug.log
@@ -53,3 +54,10 @@ firestore-debug.log
 
 #secrets
 scibit-f1chc-135ae1655c1a.json
+
+# Google Cloud credentials
+*.json
+!package.json
+!package-lock.json
+!tsconfig.json
+!components.json

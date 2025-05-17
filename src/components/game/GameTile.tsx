@@ -8,9 +8,10 @@ interface GameTileProps {
   isRevealing?: boolean;
   isCurrentRow?: boolean;
   isSubmitted?: boolean; 
+  index?: number;
 }
 
-const GameTile: FC<GameTileProps> = ({ char, status = 'empty', isRevealing, isCurrentRow, isSubmitted }) => {
+const GameTile: FC<GameTileProps> = ({ char, status = 'empty', isRevealing, isCurrentRow, isSubmitted, index = 0 }) => {
   const tileStyles = {
     empty: 'border-border bg-background text-foreground', // Updated to use standard Tailwind classes
     tbd: 'border-primary bg-background text-primary', // For currently typed letters
@@ -20,6 +21,7 @@ const GameTile: FC<GameTileProps> = ({ char, status = 'empty', isRevealing, isCu
   };
 
   const appliedStatus = isCurrentRow && !isSubmitted && char ? 'tbd' : status;
+  const animationDelay = isRevealing ? `${index * 0.1}s` : '0s';
 
   return (
     <div
@@ -28,7 +30,7 @@ const GameTile: FC<GameTileProps> = ({ char, status = 'empty', isRevealing, isCu
         tileStyles[appliedStatus],
         { 'animate-flip': isRevealing && isSubmitted }
       )}
-      style={{ animationDelay: isRevealing ? `${Math.random() * 0.3}s` : '0s' }} // Stagger flip animation
+      style={{ animationDelay }}
     >
       {char}
     </div>
