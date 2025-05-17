@@ -15,12 +15,18 @@ const GenerateDailyGameInputSchema = z.object({
 });
 
 // Document structure matching test
+interface TimestampObject {
+  seconds: number;
+  nanoseconds: number;
+}
+
 interface DailyGameDocument {
   word: string;
   difficulty: Difficulty;
   clue: string;
   summary: string;
-  createdAt: Timestamp;
+  createdAt: TimestampObject;
+  targetDate: TimestampObject;
 }
 
 const CluesSchema = z.object({
@@ -92,12 +98,23 @@ export async function generateDailyGame(
     const firestoreDate = input.date;
     console.log(`Using date format: ${firestoreDate}`);
 
+    // Helper function to convert Timestamp to plain object
+    const convertTimestampToPlainObject = (timestamp: Timestamp) => ({
+      seconds: timestamp.seconds,
+      nanoseconds: timestamp.nanoseconds
+    });
+
     // 1. First try to get complete game from Firebase
     try {
       const existingGame = await getDailyGame(firestoreDate);
       if (existingGame) {
         console.log(`Found existing game in Firebase for date ${firestoreDate}`);
-        return existingGame as unknown as DailyGameDocument;
+        // Convert Timestamp objects to plain objects
+        return {
+          ...existingGame,
+          createdAt: convertTimestampToPlainObject(existingGame.createdAt),
+          targetDate: convertTimestampToPlainObject(existingGame.targetDate)
+        } as unknown as DailyGameDocument;
       }
     } catch (dbError) {
       console.warn(`Firebase access failed for date ${firestoreDate}:`, dbError);
@@ -113,47 +130,63 @@ export async function generateDailyGame(
       const clue = await generateClues(word);
       const summary = await generateSummary(word);
 
+      const now = Timestamp.now();
+      const targetDate = Timestamp.fromDate(new Date(firestoreDate));
+
       const gameData: DailyGameDocument = {
         word,
         difficulty: input.difficulty,
         clue,
         summary,
-        createdAt: Timestamp.now()
+        createdAt: convertTimestampToPlainObject(now),
+        targetDate: convertTimestampToPlainObject(targetDate)
       };
 
-      // Store complete AI-generated game
+      // Store complete AI-generated game with actual Timestamp objects
       try {
-        const result = await storeDailyGame(firestoreDate, gameData as unknown as DailyGame);
+        const result = await storeDailyGame(firestoreDate, {
+          ...gameData,
+          createdAt: now,
+          targetDate
+        } as unknown as DailyGame);
         console.log(`Stored AI-generated game in Firebase for date ${firestoreDate}`);
-        return result.data as unknown as DailyGameDocument || gameData;
+        return gameData;
       } catch (storeError) {
         console.warn(`Failed to store AI-generated game in Firebase for date ${firestoreDate}:`, storeError);
         return gameData;
       }
-    } catch (aiError) {
+    } catch (aiError: any) {
       console.warn(`AI generation failed for date ${firestoreDate}, using fallback content:`, aiError);
       
       // 3. Use fallback as last resort
-      const fallbackWord = getFallbackWord(input.difficulty, firestoreDate); // Use firestoreDate here too
+      const fallbackWord = getFallbackWord(input.difficulty, firestoreDate);
       const fallbackContent = getFallbackContent(fallbackWord);
       
       if (!fallbackContent) {
         throw new Error('No fallback content available');
       }
 
+      const now = Timestamp.now();
+      const targetDate = Timestamp.fromDate(new Date(firestoreDate));
+
       const fallbackGameData: DailyGameDocument = {
         word: fallbackWord,
         difficulty: input.difficulty,
         clue: 'Fallback clue for ' + fallbackWord,
         summary: 'Fallback summary for ' + fallbackWord,
-        createdAt: Timestamp.now()
+        createdAt: convertTimestampToPlainObject(now),
+        targetDate: convertTimestampToPlainObject(targetDate)
       };
 
-      // Try to store fallback content
+      // Try to store fallback content with actual Timestamp objects
       try {
-        const result = await storeDailyGame(firestoreDate, fallbackGameData as unknown as DailyGame);
+        const result = await storeDailyGame(firestoreDate, {
+          ...fallbackGameData,
+          createdAt: now,
+          targetDate
+        } as unknown as DailyGame);
         console.log(`Stored fallback game in Firebase for date ${firestoreDate}`);
-        return result.data as unknown as DailyGameDocument || fallbackGameData;
+        return fallbackGameData;
       } catch (storeError) {
         console.warn(`Failed to store fallback game in Firebase for date ${firestoreDate}:`, storeError);
         return fallbackGameData;

@@ -2,6 +2,13 @@ import { Timestamp } from 'firebase/firestore';
 
 export type Difficulty = 'easy' | 'medium' | 'hard';
 
+export interface TimestampObject {
+  seconds: number;
+  nanoseconds: number;
+}
+
+export type TimestampType = Timestamp | TimestampObject;
+
 export interface DailyGameClues {
   technical: string;
   contextual: string;
@@ -17,10 +24,10 @@ export interface DailyGameSummary {
 export interface DailyGame {
   word: string;
   difficulty: Difficulty;
-  clues: DailyGameClues;
-  summary: DailyGameSummary;
-  targetDate: Timestamp;
-  createdAt: Timestamp;
+  clue: string;
+  summary: string;
+  targetDate: TimestampType;
+  createdAt: TimestampType;
 }
 
 export interface GenerationResult {
