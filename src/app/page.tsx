@@ -236,7 +236,7 @@ const SciBitPage: FC = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [gameState, handleEnter, handleCharInput, handleDelete]);
 
-  const handleShare = () => {
+  const handleShare = async () => {
     const getEmojiGrid = () => guesses
         .filter(g => g.isSubmitted)
         .map(guess =>
@@ -248,9 +248,56 @@ const SciBitPage: FC = () => {
         ).join('\n');
     
     const shareText = `SciBit ${gameState === 'won' ? guesses.length : 'X'}/${MAX_GUESSES}\nWord: ${targetWord.toUpperCase()}\n\n${getEmojiGrid()}`;
-    navigator.clipboard.writeText(shareText)
-      .then(() => toast({ title: "Copied to clipboard!", description: "Share your results!" }))
-      .catch(() => toast({ title: "Error", description: "Could not copy results.", variant: "destructive" }));
+    
+    try {
+      // Try using the Share API first
+      if (navigator.share) {
+        await navigator.share({
+          title: 'SciBit Results',
+          text: shareText
+        });
+        toast({ title: "Shared!", description: "Results shared successfully!" });
+        return;
+      }
+
+      // Fallback to clipboard
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(shareText);
+        toast({ title: "Copied to clipboard!", description: "Share your results!" });
+        return;
+      }
+
+      // Fallback for older browsers
+      const textArea = document.createElement('textarea');
+      textArea.value = shareText;
+      textArea.style.position = 'fixed';
+      textArea.style.left = '-999999px';
+      textArea.style.top = '-999999px';
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+
+      try {
+        document.execCommand('copy');
+        textArea.remove();
+        toast({ title: "Copied to clipboard!", description: "Share your results!" });
+      } catch (err) {
+        console.error('Failed to copy text: ', err);
+        textArea.remove();
+        toast({ 
+          title: "Couldn't copy automatically", 
+          description: "Please manually select and copy your results.",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error('Error sharing results:', error);
+      toast({ 
+        title: "Sharing failed", 
+        description: "Please try again or manually copy your results.",
+        variant: "destructive"
+      });
+    }
   };
 
   const handleGameExit = useCallback(() => {
