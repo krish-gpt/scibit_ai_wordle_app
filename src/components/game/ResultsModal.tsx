@@ -109,11 +109,13 @@ const ResultsModal: FC<ResultsModalProps> = ({
 
         <div className="my-4">
           {process.env.NEXT_PUBLIC_ADSENSE_SLOT_RESULTS && (
-            <AdUnit
-              adSlot={process.env.NEXT_PUBLIC_ADSENSE_SLOT_RESULTS}
-              className="min-h-[250px]"
-              style={{ minWidth: '300px' }}
-            />
+            <div className="relative w-full flex justify-center">
+              <AdUnit
+                adSlot={process.env.NEXT_PUBLIC_ADSENSE_SLOT_RESULTS}
+                className="min-h-[250px] w-full max-w-[300px]"
+                adFormat="rectangle"
+              />
+            </div>
           )}
         </div>
 
