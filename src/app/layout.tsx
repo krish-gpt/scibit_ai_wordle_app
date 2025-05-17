@@ -17,6 +17,7 @@ const geistMono = Geist_Mono({ // Corrected usage
 export const metadata: Metadata = {
   title: 'SciBit - AI Word Game',
   description: 'Guess the daily AI-related term!',
+  viewport: 'width=device-width, initial-scale=1',
 };
 
 export default function RootLayout({
@@ -28,9 +29,7 @@ export default function RootLayout({
 
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-      <head>
-        <meta charSet="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
+      <body>
         {publisherId && (
           <Script
             async
@@ -42,8 +41,6 @@ export default function RootLayout({
             }}
           />
         )}
-      </head>
-      <body>
         {children}
         <Toaster />
       </body>
