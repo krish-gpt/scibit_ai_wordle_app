@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Loader2, AlertTriangle, RotateCw } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { generateDailyGame } from '@/ai/flows/generate-daily-game';
+import { getFallbackContent } from '@/lib/utils/fallback';
 import type { GuessFeedback, KeyStatus, LetterFeedback } from '@/lib/types';
 
 const MAX_GUESSES = 6;
@@ -46,26 +47,19 @@ const SciBitPage: FC = () => {
     return `${year}-${month}-${day}`;
   }, []);
 
-  const initializeGame = useCallback(async () => {
-    setGameState('loading');
-    setGuesses([]);
-    setCurrentGuess('');
-    setClue(null);
-    setIsClueLoading(true);
-    setTermSummary(null);
-    setKeyStatuses({});
-    setErrorMsg(null);
+  useEffect(() => {
+    const loadGame = async () => {
+      setGameState('loading');
+      setGuesses([]);
+      setCurrentGuess('');
+      setClue(null);
+      setIsClueLoading(true);
+      setTermSummary(null);
+      setKeyStatuses({});
+      setErrorMsg(null);
 
-    let attempts = 0;
-    const maxAttempts = 2;
-
-    while (attempts < maxAttempts) {
-      attempts++;
       try {
         const today = getTodayDate();
-        let gameData = null;
-
-        // First try to get the game from Firestore
         const dailyGame = await generateDailyGame({ 
           difficulty,
           date: today
@@ -75,22 +69,16 @@ const SciBitPage: FC = () => {
           throw new Error("Failed to generate a valid word.");
         }
 
-        gameData = {
+        const gameData = {
           word: dailyGame.word.toUpperCase(),
           date: today,
           difficulty,
-          clue: dailyGame.clue || '', // Using the clue directly
+          clue: dailyGame.clue || '',
           summary: dailyGame.summary || ''
         };
 
         if (!gameData.word || gameData.word.length < 3 || gameData.word.length > 10) {
-          console.warn(`Generated word "${gameData.word}" has invalid length (attempt ${attempts}).`);
-          if (attempts < maxAttempts) {
-            gameData = null;
-            continue;
-          } else {
-            throw new Error("Generated word has an unsupported length after multiple attempts.");
-          }
+          throw new Error("Generated word has an unsupported length.");
         }
         
         setTargetWord(gameData.word);
@@ -103,26 +91,21 @@ const SciBitPage: FC = () => {
         }
         
         setGameState('playing');
-        return;
 
       } catch (error: any) {
-        console.error('Error initializing game:', error);
-        if (attempts >= maxAttempts) {
-          setGameState('error');
-          setErrorMsg(error?.message || "Failed to initialize game. Please try again.");
-          toast({
-            title: "Error",
-            description: "Failed to initialize game. Please try again.",
-            variant: "destructive"
-          });
-        }
+        console.error('Error loading game:', error);
+        setGameState('error');
+        setErrorMsg(error?.message || "Failed to load game. Please try again.");
+        toast({
+          title: "Error",
+          description: "Failed to load game. Please try again.",
+          variant: "destructive"
+        });
       }
-    }
-  }, [difficulty, toast, getTodayDate]);
+    };
 
-  useEffect(() => {
-    initializeGame();
-  }, [initializeGame]);
+    loadGame();
+  }, [difficulty, toast, getTodayDate]);
 
   const handleCharInput = useCallback((char: string) => {
     if (gameState !== 'playing' || currentGuess.length >= wordLength) return;
@@ -200,18 +183,39 @@ const SciBitPage: FC = () => {
     
     setCurrentGuess('');
 
+    const loadSummary = async () => {
+      try {
+        setIsSummaryLoading(true);
+        const today = getTodayDate();
+        const dailyGame = await generateDailyGame({ 
+          difficulty,
+          date: today
+        });
+        if (dailyGame?.summary) {
+          setTermSummary(dailyGame.summary);
+        }
+      } catch (error) {
+        console.error('Error loading summary:', error);
+        // Use fallback content if available
+        const fallback = getFallbackContent(targetWord);
+        if (fallback?.summary) {
+          setTermSummary(fallback.summary.definition);
+        }
+      } finally {
+        setIsSummaryLoading(false);
+      }
+    };
+
     if (currentGuess === targetWord) {
       setGameState('won');
       toast({ title: "You Won!", description: "Congratulations!", className: "bg-tile-correct-background text-tile-correct-foreground" });
-      setIsSummaryLoading(true);
-      setTermSummary(termSummary);
+      loadSummary();
     } else if (newGuesses.length >= MAX_GUESSES) {
       setGameState('lost');
       toast({ title: "Game Over", description: `The word was ${targetWord}.`, variant: "destructive" });
-      setIsSummaryLoading(true);
-      setTermSummary(termSummary);
+      loadSummary();
     }
-  }, [gameState, currentGuess, wordLength, targetWord, guesses, toast, keyStatuses, termSummary]);
+  }, [gameState, currentGuess, wordLength, targetWord, guesses, toast, keyStatuses, termSummary, difficulty, getTodayDate]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -249,6 +253,11 @@ const SciBitPage: FC = () => {
       .catch(() => toast({ title: "Error", description: "Could not copy results.", variant: "destructive" }));
   };
 
+  const handleGameExit = useCallback(() => {
+    // Refresh the page to completely reset the game state
+    window.location.reload();
+  }, []);
+
   if (gameState === 'loading') {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen p-4">
@@ -266,9 +275,6 @@ const SciBitPage: FC = () => {
             <AlertTriangle className="h-16 w-16 text-destructive mb-4" />
             <h2 className="text-2xl font-semibold text-destructive">Oops! Something went wrong.</h2>
             <p className="text-muted-foreground max-w-md">{errorMsg || "We couldn't load the game. Please check your connection or try refreshing the page."}</p>
-            <Button onClick={initializeGame} className="mt-4">
-                <RotateCw className="mr-2 h-4 w-4" /> Try Again
-            </Button>
         </main>
       </div>
     );
@@ -302,14 +308,13 @@ const SciBitPage: FC = () => {
       {(gameState === 'won' || gameState === 'lost') && (
         <ResultsModal
           isOpen={gameState === 'won' || gameState === 'lost'}
-          onClose={() => { /* Modal typically closes via its own actions */ }}
+          onClose={handleGameExit}
           gameState={gameState}
           targetWord={targetWord}
           guesses={guesses}
           attempts={guesses.length}
           termSummary={termSummary}
           isSummaryLoading={isSummaryLoading}
-          onPlayAgain={initializeGame}
           onShare={handleShare}
           maxGuesses={MAX_GUESSES}
         />

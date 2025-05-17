@@ -1,7 +1,6 @@
 import type { FC } from 'react';
 import {
   AlertDialog,
-  AlertDialogAction,
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
@@ -11,7 +10,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
-import { Share2, RotateCw, ThumbsUp, ThumbsDown, Loader2 } from 'lucide-react';
+import { Share2, ThumbsUp, ThumbsDown, Loader2, X } from 'lucide-react';
 import type { GuessFeedback } from '@/lib/types';
 import AdUnit from '@/components/ads/AdUnit';
 
@@ -24,7 +23,6 @@ interface ResultsModalProps {
   attempts: number;
   termSummary: string | null;
   isSummaryLoading: boolean;
-  onPlayAgain: () => void;
   onShare: () => void;
   maxGuesses: number;
 }
@@ -38,7 +36,6 @@ const ResultsModal: FC<ResultsModalProps> = ({
   attempts,
   termSummary,
   isSummaryLoading,
-  onPlayAgain,
   onShare,
   maxGuesses,
 }) => {
@@ -66,6 +63,11 @@ const ResultsModal: FC<ResultsModalProps> = ({
   return (
     <AlertDialog open={isOpen} onOpenChange={onClose}>
       <AlertDialogContent className="max-w-lg w-full">
+        <div className="absolute right-4 top-4">
+          <Button variant="ghost" size="icon" onClick={onClose} className="h-6 w-6">
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
         <AlertDialogHeader>
           <AlertDialogTitle className="flex items-center text-2xl">
             <Icon className={`h-8 w-8 mr-3 ${gameState === 'won' ? 'text-tile-correct-background' : 'text-destructive'}`} />
@@ -115,13 +117,13 @@ const ResultsModal: FC<ResultsModalProps> = ({
           )}
         </div>
 
-        <AlertDialogFooter className="gap-2 sm:gap-0">
-          <Button variant="outline" onClick={onShare}>
+        <AlertDialogFooter className="flex flex-col gap-2">
+          <Button variant="outline" onClick={onShare} className="w-full">
             <Share2 className="h-4 w-4 mr-2" /> Share
           </Button>
-          <AlertDialogAction onClick={onPlayAgain} className="bg-primary hover:bg-primary/90 text-primary-foreground">
-            <RotateCw className="h-4 w-4 mr-2" /> Play Again (New Word)
-          </AlertDialogAction>
+          <Button variant="ghost" onClick={onClose} className="w-full text-destructive hover:text-destructive">
+            <X className="h-4 w-4 mr-2" /> Exit Game
+          </Button>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
