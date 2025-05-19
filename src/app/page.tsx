@@ -307,21 +307,21 @@ const SciBitPage: FC = () => {
 
   if (gameState === 'loading') {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen p-4">
-        <Loader2 className="h-16 w-16 animate-spin text-primary mb-4" />
-        <p className="text-xl text-muted-foreground">Loading your daily SciBit challenge...</p>
+      <div className="flex flex-col items-center justify-center min-h-screen p-2 sm:p-4">
+        <Loader2 className="h-12 w-12 sm:h-16 sm:w-16 animate-spin text-primary mb-2 sm:mb-4" />
+        <p className="text-lg sm:text-xl text-muted-foreground text-center">Loading your daily SciBit challenge...</p>
       </div>
     );
   }
 
   if (gameState === 'error') {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen p-4 text-center">
+      <div className="flex flex-col items-center justify-center min-h-screen p-2 sm:p-4 text-center">
         <Header />
-        <main className="flex flex-col items-center gap-8 mt-8 px-2 w-full">
-            <AlertTriangle className="h-16 w-16 text-destructive mb-4" />
-            <h2 className="text-2xl font-semibold text-destructive">Oops! Something went wrong.</h2>
-            <p className="text-muted-foreground max-w-md">{errorMsg || "We couldn't load the game. Please check your connection or try refreshing the page."}</p>
+        <main className="flex flex-col items-center gap-4 sm:gap-8 mt-4 sm:mt-8 px-2 w-full">
+            <AlertTriangle className="h-12 w-12 sm:h-16 sm:w-16 text-destructive mb-2 sm:mb-4" />
+            <h2 className="text-xl sm:text-2xl font-semibold text-destructive">Oops! Something went wrong.</h2>
+            <p className="text-sm sm:text-base text-muted-foreground max-w-md">{errorMsg || "We couldn't load the game. Please check your connection or try refreshing the page."}</p>
         </main>
       </div>
     );
@@ -329,9 +329,9 @@ const SciBitPage: FC = () => {
 
 
   return (
-    <div className="flex flex-col items-center min-h-screen pt-0 pb-8 sm:py-8">
+    <div className="flex flex-col items-center min-h-screen pt-0 pb-2 sm:pb-4">
       <Header />
-      <main className="flex flex-col items-center gap-6 sm:gap-8 mt-6 sm:mt-8 px-2 w-full">
+      <main className="flex flex-col items-center gap-3 sm:gap-6 mt-2 sm:mt-6 px-1 sm:px-2 w-full max-w-lg mx-auto">
         <GameBoard
           guesses={guesses}
           currentGuess={currentGuess}
