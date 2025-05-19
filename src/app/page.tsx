@@ -260,14 +260,19 @@ const SciBitPage: FC = () => {
         return;
       }
 
-      // Fallback to clipboard
-      if (navigator.clipboard && window.isSecureContext) {
-        await navigator.clipboard.writeText(shareText);
-        toast({ title: "Copied to clipboard!", description: "Share your results!" });
-        return;
+      // Fallback to clipboard with permission handling
+      try {
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(shareText);
+          toast({ title: "Copied to clipboard!", description: "Share your results!" });
+          return;
+        }
+      } catch (clipboardError) {
+        console.warn('Clipboard API failed:', clipboardError);
+        // Continue to fallback method
       }
 
-      // Fallback for older browsers
+      // Fallback for older browsers or when clipboard API is blocked
       const textArea = document.createElement('textarea');
       textArea.value = shareText;
       textArea.style.position = 'fixed';
@@ -278,24 +283,32 @@ const SciBitPage: FC = () => {
       textArea.select();
 
       try {
-        document.execCommand('copy');
+        const successful = document.execCommand('copy');
         textArea.remove();
-        toast({ title: "Copied to clipboard!", description: "Share your results!" });
+        if (successful) {
+          toast({ title: "Copied to clipboard!", description: "Share your results!" });
+        } else {
+          throw new Error('Copy command failed');
+        }
       } catch (err) {
         console.error('Failed to copy text: ', err);
         textArea.remove();
+        // Show the text in a modal or alert as last resort
         toast({ 
-          title: "Couldn't copy automatically", 
-          description: "Please manually select and copy your results.",
-          variant: "destructive"
+          title: "Manual Copy Required", 
+          description: "Please select and copy this text: " + shareText,
+          duration: 10000, // Show for 10 seconds
+          variant: "default"
         });
       }
     } catch (error) {
       console.error('Error sharing results:', error);
+      // Show the text directly to the user
       toast({ 
-        title: "Sharing failed", 
-        description: "Please try again or manually copy your results.",
-        variant: "destructive"
+        title: "Share Manually", 
+        description: "Please copy this text: " + shareText,
+        duration: 10000, // Show for 10 seconds
+        variant: "default"
       });
     }
   };
