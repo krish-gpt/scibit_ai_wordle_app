@@ -56,17 +56,15 @@ export default function RootLayout({
         )}
       </head>
       <body>
-        {publisherId && (
-          <Script
-            async
-            src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"
-            strategy="afterInteractive"
-            data-ad-client={publisherId}
-            onError={(e) => {
-              console.error('Error loading AdSense:', e);
-            }}
-          />
-        )}
+        <Script
+          async
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8556283729402249"
+          strategy="afterInteractive"
+          crossOrigin="anonymous"
+          onError={(e) => {
+            console.error('Error loading AdSense:', e);
+          }}
+        />
         {children}
         <Toaster />
       </body>

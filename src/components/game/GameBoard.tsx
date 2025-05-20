@@ -16,13 +16,13 @@ const GameBoard: FC<GameBoardProps> = ({ guesses, currentGuess, wordLength, maxG
   const rows = Array.from({ length: maxGuesses });
 
   return (
-    <div className={cn("grid gap-1 sm:gap-1.5 p-1.5 sm:p-2.5 rounded-md shadow-md bg-card", isShaking && "animate-shake")}>
+    <div className={cn("grid p-1.5 sm:p-2.5 rounded-md shadow-md bg-card", isShaking && "animate-shake")}>
       {rows.map((_, rowIndex) => {
         const guessFeedback = guesses[rowIndex];
         const isCurrentRow = rowIndex === currentRowIndex;
         
         return (
-          <div key={rowIndex} className="grid gap-1 sm:gap-1.5" style={{ gridTemplateColumns: `repeat(${wordLength}, minmax(0, 1fr))` }}>
+          <div key={rowIndex} className="grid gap-x-0.5 gap-y-1 sm:gap-x-1.5 sm:gap-y-1.5" style={{ gridTemplateColumns: `repeat(${wordLength}, minmax(0, 1fr))` }}>
             {Array.from({ length: wordLength }).map((_, charIndex) => {
               let char: string | undefined = undefined;
               let status: TileStatus = 'empty';

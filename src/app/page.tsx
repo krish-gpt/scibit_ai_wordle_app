@@ -342,28 +342,32 @@ const SciBitPage: FC = () => {
 
 
   return (
-    <div className="flex flex-col items-center min-h-screen pt-0 pb-2 sm:pb-4">
+    <div className="flex flex-col items-center min-h-screen h-screen">
       <Header />
-      <main className="flex flex-col items-center gap-3 sm:gap-6 mt-2 sm:mt-6 px-1 sm:px-2 w-full max-w-lg mx-auto">
-        <GameBoard
-          guesses={guesses}
-          currentGuess={currentGuess}
-          wordLength={wordLength}
-          maxGuesses={MAX_GUESSES}
-          currentRowIndex={guesses.length}
-          isShaking={isShaking}
-        />
-        <ClueDisplay
-          clue={clue}
-          isLoading={isClueLoading}
-        />
-        <Keyboard
-          onChar={handleCharInput}
-          onDelete={handleDelete}
-          onEnter={handleEnter}
-          keyStatuses={keyStatuses}
-          disabled={gameState !== 'playing'}
-        />
+      <main className="flex flex-col flex-1 min-h-0 w-full max-w-lg mx-auto">
+        <div className="flex-1 flex flex-col justify-center min-h-0 px-1 sm:px-2 gap-2 sm:gap-4">
+          <GameBoard
+            guesses={guesses}
+            currentGuess={currentGuess}
+            wordLength={wordLength}
+            maxGuesses={MAX_GUESSES}
+            currentRowIndex={guesses.length}
+            isShaking={isShaking}
+          />
+          <ClueDisplay
+            clue={clue}
+            isLoading={isClueLoading}
+          />
+        </div>
+        <div className="w-full" style={{ minHeight: 80 }}>
+          <Keyboard
+            onChar={handleCharInput}
+            onDelete={handleDelete}
+            onEnter={handleEnter}
+            keyStatuses={keyStatuses}
+            disabled={gameState !== 'playing'}
+          />
+        </div>
       </main>
       {(gameState === 'won' || gameState === 'lost') && (
         <ResultsModal
