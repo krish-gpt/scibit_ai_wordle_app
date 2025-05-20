@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from 'next/font/google'; // Corrected import for Ge
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster"; // Import Toaster
 import Script from 'next/script';
+import AdSenseScript from '@/components/ads/AdSenseScript';
 
 const geistSans = Geist({ // Corrected usage
   variable: '--font-geist-sans',
@@ -56,15 +57,7 @@ export default function RootLayout({
         )}
       </head>
       <body>
-        <Script
-          async
-          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8556283729402249"
-          strategy="afterInteractive"
-          crossOrigin="anonymous"
-          onError={(e) => {
-            console.error('Error loading AdSense:', e);
-          }}
-        />
+        {publisherId && <AdSenseScript publisherId={publisherId} />}
         {children}
         <Toaster />
       </body>
