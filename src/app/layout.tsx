@@ -3,7 +3,6 @@ import { Geist, Geist_Mono } from 'next/font/google'; // Corrected import for Ge
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster"; // Import Toaster
 import Script from 'next/script';
-import AdSenseScript from '@/components/ads/AdSenseScript';
 
 const geistSans = Geist({ // Corrected usage
   variable: '--font-geist-sans',
@@ -39,6 +38,13 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
       <head>
+        {publisherId && (
+          <script
+            async
+            src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${publisherId}`}
+            crossOrigin="anonymous"
+          />
+        )}
         {gaMeasurementId && (
           <>
             <Script
@@ -57,7 +63,6 @@ export default function RootLayout({
         )}
       </head>
       <body>
-        {publisherId && <AdSenseScript publisherId={publisherId} />}
         {children}
         <Toaster />
       </body>

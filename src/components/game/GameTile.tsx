@@ -26,7 +26,7 @@ const GameTile: FC<GameTileProps> = ({ char, status = 'empty', isRevealing, isCu
   return (
     <div
       className={cn(
-        'flex items-center justify-center h-12 w-12 sm:h-16 sm:w-16 border-2 text-xl sm:text-3xl font-bold uppercase rounded transition-all duration-300 ease-in-out',
+        'flex items-center justify-center h-10 w-10 sm:h-16 sm:w-16 border-2 text-lg sm:text-3xl font-bold uppercase rounded transition-all duration-300 ease-in-out',
         tileStyles[appliedStatus],
         { 'animate-flip': isRevealing && isSubmitted }
       )}

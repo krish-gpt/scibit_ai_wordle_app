@@ -1,7 +1,7 @@
 import type { FC } from 'react';
 import GameTile from './GameTile';
 import type { GuessFeedback, TileStatus } from '@/lib/types';
-import { cn } from '@/lib/utils'; // Added import for cn
+import { cn } from '@/lib/utils';
 
 interface GameBoardProps {
   guesses: GuessFeedback[];
@@ -16,28 +16,37 @@ const GameBoard: FC<GameBoardProps> = ({ guesses, currentGuess, wordLength, maxG
   const rows = Array.from({ length: maxGuesses });
 
   return (
-    <div className={cn("grid p-1.5 sm:p-2.5 rounded-md shadow-md bg-card", isShaking && "animate-shake")}>
-      {rows.map((_, rowIndex) => {
-        const guessFeedback = guesses[rowIndex];
-        const isCurrentRow = rowIndex === currentRowIndex;
-        
-        return (
-          <div key={rowIndex} className="grid gap-x-0.5 gap-y-1 sm:gap-x-1.5 sm:gap-y-1.5" style={{ gridTemplateColumns: `repeat(${wordLength}, minmax(0, 1fr))` }}>
-            {Array.from({ length: wordLength }).map((_, charIndex) => {
-              let char: string | undefined = undefined;
-              let status: TileStatus = 'empty';
-
-              if (guessFeedback) {
-                char = guessFeedback.letters[charIndex]?.char;
-                status = guessFeedback.letters[charIndex]?.status || 'empty';
-              } else if (isCurrentRow) {
-                char = currentGuess[charIndex];
-                status = char ? 'tbd' : 'empty';
-              }
-              
-              return (
+    <div
+      className={cn(
+        'w-full max-w-xs sm:max-w-md md:max-w-lg aspect-[5/6] flex flex-col justify-center items-center min-h-0',
+        isShaking && 'animate-shake'
+      )}
+    >
+      <div
+        className={cn(
+          'grid w-full h-full min-h-0',
+        )}
+        style={{
+          gridTemplateRows: `repeat(${maxGuesses}, 1fr)`,
+          gridTemplateColumns: `repeat(${wordLength}, 1fr)`
+        }}
+      >
+        {rows.map((_, rowIndex) => {
+          const guessFeedback = guesses[rowIndex];
+          const isCurrentRow = rowIndex === currentRowIndex;
+          return Array.from({ length: wordLength }).map((_, charIndex) => {
+            let char: string | undefined = undefined;
+            let status: TileStatus = 'empty';
+            if (guessFeedback) {
+              char = guessFeedback.letters[charIndex]?.char;
+              status = guessFeedback.letters[charIndex]?.status || 'empty';
+            } else if (isCurrentRow) {
+              char = currentGuess[charIndex];
+              status = char ? 'tbd' : 'empty';
+            }
+            return (
+              <div key={rowIndex + '-' + charIndex} className="flex items-center justify-center w-full h-full p-0.5">
                 <GameTile
-                  key={charIndex}
                   char={char}
                   status={status}
                   isRevealing={!!guessFeedback?.isSubmitted}
@@ -45,11 +54,11 @@ const GameBoard: FC<GameBoardProps> = ({ guesses, currentGuess, wordLength, maxG
                   isSubmitted={!!guessFeedback?.isSubmitted}
                   index={charIndex}
                 />
-              );
-            })}
-          </div>
-        );
-      })}
+              </div>
+            );
+          });
+        })}
+      </div>
     </div>
   );
 };

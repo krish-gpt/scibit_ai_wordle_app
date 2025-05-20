@@ -345,7 +345,7 @@ const SciBitPage: FC = () => {
     <div className="flex flex-col items-center min-h-screen h-screen">
       <Header />
       <main className="flex flex-col flex-1 min-h-0 w-full max-w-lg mx-auto">
-        <div className="flex-1 flex flex-col justify-center min-h-0 px-1 sm:px-2 gap-2 sm:gap-4">
+        <div className="flex flex-col min-h-0 px-1 sm:px-2 gap-0">
           <GameBoard
             guesses={guesses}
             currentGuess={currentGuess}
@@ -359,7 +359,7 @@ const SciBitPage: FC = () => {
             isLoading={isClueLoading}
           />
         </div>
-        <div className="w-full" style={{ minHeight: 80 }}>
+        <div className="w-full flex-shrink-0">
           <Keyboard
             onChar={handleCharInput}
             onDelete={handleDelete}

@@ -1,5 +1,4 @@
 import type { FC } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Lightbulb, Loader2 } from 'lucide-react';
 
 interface ClueDisplayProps {
@@ -9,31 +8,23 @@ interface ClueDisplayProps {
 
 const ClueDisplay: FC<ClueDisplayProps> = ({ clue, isLoading }) => {
   return (
-    <Card className="w-full max-w-md shadow-lg">
-      <CardHeader>
-        <CardTitle className="flex items-center text-xl">
-          <Lightbulb className="h-6 w-6 mr-2 text-primary" />
-          Clue
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="min-h-[60px]"> {/* Added min-height to prevent layout shift */}
+    <div className="w-full max-w-md border bg-secondary rounded-md flex items-start gap-2 px-3 py-2 shadow-sm min-h-[40px]">
+      <Lightbulb className="h-5 w-5 mt-0.5 text-primary shrink-0" />
+      <div className="flex-1">
         {isLoading && !clue && (
-          <div className="flex items-center justify-center p-3 text-muted-foreground">
-            <Loader2 className="h-5 w-5 animate-spin mr-2" />
+          <div className="flex items-center text-muted-foreground text-sm">
+            <Loader2 className="h-4 w-4 animate-spin mr-2" />
             <span>Loading clue...</span>
           </div>
         )}
-        {clue && !isLoading && ( // Display clue only when not loading and clue is available
-          <p className="text-muted-foreground italic p-3 bg-secondary rounded-md">{clue}</p>
-        )}
-        {clue && isLoading && ( // If clue is already there but we are somehow in loading state (e.g. refresh attempt)
-             <p className="text-muted-foreground italic p-3 bg-secondary rounded-md">{clue}</p>
+        {clue && (
+          <p className="text-muted-foreground italic text-sm leading-tight">{clue}</p>
         )}
         {!isLoading && !clue && (
-          <p className="text-muted-foreground italic p-3 text-center">The clue for the word will appear here.</p>
+          <p className="text-muted-foreground italic text-sm text-center">The clue for the word will appear here.</p>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 };
 
