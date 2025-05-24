@@ -5,7 +5,7 @@ import type { FC } from 'react';
 import Header from '@/components/Header';
 import GameBoard from '@/components/game/GameBoard';
 import Keyboard from '@/components/game/Keyboard';
-import ClueDisplay from '@/components/game/ClueDisplay';
+import ToolsSidebar from '../components/game/ToolsSidebar';
 import ResultsModal from '@/components/game/ResultsModal';
 import { Button } from '@/components/ui/button';
 import { Loader2, AlertTriangle, RotateCw } from 'lucide-react';
@@ -14,7 +14,7 @@ import { generateDailyGame } from '@/ai/flows/generate-daily-game';
 import { getFallbackContent } from '@/lib/utils/fallback';
 import type { GuessFeedback, KeyStatus, LetterFeedback } from '@/lib/types';
 
-const MAX_GUESSES = 6;
+const MAX_GUESSES = 5;
 const DEFAULT_DIFFICULTY = 'medium' as 'easy' | 'medium' | 'hard';
 
 const SciBitPage: FC = () => {
@@ -60,10 +60,16 @@ const SciBitPage: FC = () => {
 
       try {
         const today = getTodayDate();
-        const dailyGame = await generateDailyGame({ 
+        const dailyGame =  await generateDailyGame({ 
           difficulty,
           date: today
         });
+        
+        // {
+        //   word: "Modal",
+        //   difficulty: "hard"
+        // }
+       
         
         if (!dailyGame?.word || typeof dailyGame.word !== 'string' || dailyGame.word.trim() === '') {
           throw new Error("Failed to generate a valid word.");
@@ -353,10 +359,11 @@ const SciBitPage: FC = () => {
           currentRowIndex={guesses.length}
           isShaking={isShaking}
         />
-        <ClueDisplay
+        {/* <ClueDisplay
           clue={clue}
           isLoading={isClueLoading}
-        />
+        /> */}
+        <ToolsSidebar clue={clue} />
         <Keyboard
           onChar={handleCharInput}
           onDelete={handleDelete}

@@ -28,12 +28,12 @@ const Keyboard: FC<KeyboardProps> = ({ onChar, onDelete, onEnter, keyStatuses, d
   };
 
   return (
-    <div className="flex flex-col gap-1 sm:gap-1.5 p-1 sm:p-2 bg-card rounded-md shadow-md w-full max-w-lg">
+    <div className="absolute bottom-2 flex flex-col gap-1 sm:gap-1.5 p-1 sm:p-2 bg-card rounded-md shadow-md w-full max-w-2xl mx-auto">
       {rows.map((row, rowIndex) => (
         <div key={rowIndex} className="flex justify-center gap-0.5 sm:gap-1.5">
           {row.map((key) => {
             const keyStatus = keyStatuses[key.toUpperCase()];
-            const buttonClass = getStatusClass(keyStatus);
+            const buttonClass = key === 'ENTER' ? getStatusClass('correct') : getStatusClass(keyStatus);
 
             if (key === 'ENTER') {
               return (
@@ -41,10 +41,10 @@ const Keyboard: FC<KeyboardProps> = ({ onChar, onDelete, onEnter, keyStatuses, d
                   key={key}
                   onClick={onEnter}
                   disabled={disabled}
-                  className={cn("h-9 sm:h-14 flex-grow-[1.2] px-0.5 sm:px-3 text-[10px] sm:text-sm font-bold uppercase", buttonClass)}
+                  className={cn("h-9 sm:h-14 flex-grow-[1.2] px-0.5 sm:px-3 text-[10px] sm:text-sm font-bold bg-tile-correct-background uppercase", buttonClass)}
                   aria-label="Submit guess"
                 >
-                  <Send className="h-3 w-3 sm:h-6 sm:w-6 mr-0.5 sm:mr-2" /> Enter
+                  <Send className="h-3 w-3 sm:h-6 sm:w-6 mr-0.5 sm:mr-2 " /> Enter
                 </Button>
               );
             }

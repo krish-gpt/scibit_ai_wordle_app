@@ -18,6 +18,7 @@ const GameTile: FC<GameTileProps> = ({ char, status = 'empty', isRevealing, isCu
     correct: 'bg-tile-correct-background text-tile-correct-foreground border-tile-correct-background',
     present: 'bg-tile-present-background text-tile-present-foreground border-tile-present-background',
     absent: 'bg-tile-absent-background text-tile-absent-foreground border-tile-absent-background',
+    current: 'border-primary bg-background text-primary', // For the current row
   };
 
   const appliedStatus = isCurrentRow && !isSubmitted && char ? 'tbd' : status;

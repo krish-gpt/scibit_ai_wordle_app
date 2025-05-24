@@ -32,7 +32,7 @@ const GameBoard: FC<GameBoardProps> = ({ guesses, currentGuess, wordLength, maxG
                 status = guessFeedback.letters[charIndex]?.status || 'empty';
               } else if (isCurrentRow) {
                 char = currentGuess[charIndex];
-                status = char ? 'tbd' : 'empty';
+                status = char ? 'tbd' : 'current';
               }
               
               return (
