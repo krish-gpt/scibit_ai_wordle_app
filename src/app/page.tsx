@@ -349,8 +349,8 @@ const SciBitPage: FC = () => {
 
   return (
     <div className="flex flex-col items-center min-h-screen pt-0 pb-2 sm:pb-4">
-      <Header />
-      <main className="flex flex-col items-center gap-3 sm:gap-6 mt-2 sm:mt-6 px-1 sm:px-2 w-full max-w-lg mx-auto">
+      <Header clue={clue || ''}/>
+      <main className="flex flex-col items-center gap-3 sm:gap-6 mt-2 sm:mt-6 px-1 sm:px-2 w-full max-w-2xl mx-auto">
         <GameBoard
           guesses={guesses}
           currentGuess={currentGuess}
@@ -363,7 +363,6 @@ const SciBitPage: FC = () => {
           clue={clue}
           isLoading={isClueLoading}
         /> */}
-        <ToolsSidebar clue={clue} />
         <Keyboard
           onChar={handleCharInput}
           onDelete={handleDelete}

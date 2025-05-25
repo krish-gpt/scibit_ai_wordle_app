@@ -1,7 +1,7 @@
 import { BrainCircuit } from 'lucide-react';
-import type { FC } from 'react';
+import ToolsSidebar, { ToolsSidebarProps } from './game/ToolsSidebar';
 
-const Header: FC = () => {
+const Header: React.FC<ToolsSidebarProps> = ({ clue }) => {
   return (
     <header className="flex flex-col items-center justify-center p-4 border-b border-border w-full">
       <div className="flex items-center space-x-3">
@@ -11,6 +11,7 @@ const Header: FC = () => {
         </h1>
       </div>
       <p className="text-muted-foreground mt-1">Guess the daily AI-related term!</p>
+      <ToolsSidebar clue={clue} />
     </header>
   );
 };
