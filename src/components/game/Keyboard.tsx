@@ -41,7 +41,7 @@ const Keyboard: FC<KeyboardProps> = ({ onChar, onDelete, onEnter, keyStatuses, d
                   key={key}
                   onClick={onEnter}
                   disabled={disabled}
-                  className={cn("h-9 sm:h-14 flex-grow-[1.2] px-0.5 sm:px-3 text-[10px] sm:text-sm font-bold bg-tile-correct-background uppercase", buttonClass)}
+                  className={cn("h-14 sm:h-14 flex-grow-[1.2] px-0.5 sm:px-3 text-[14px] sm:text-sm font-bold bg-tile-correct-background uppercase", buttonClass)}
                   aria-label="Submit guess"
                 >
                   <Send className="h-3 w-3 sm:h-6 sm:w-6 mr-0.5 sm:mr-2 " /> 
@@ -55,7 +55,7 @@ const Keyboard: FC<KeyboardProps> = ({ onChar, onDelete, onEnter, keyStatuses, d
                   key={key}
                   onClick={onDelete}
                   disabled={disabled}
-                  className={cn("h-9 sm:h-14 flex-grow-[1.2] px-0.5 sm:px-3 text-[10px] sm:text-sm font-bold uppercase", buttonClass)}
+                  className={cn("h-14 sm:h-14 flex-grow-[1.2] px-0.5 sm:px-3 text-[14px] sm:text-sm font-bold uppercase", buttonClass)}
                   aria-label="Delete last character"
                 >
                    <Delete className="h-3 w-3 sm:h-6 sm:w-6 mr-0.5 sm:mr-2" /> 
@@ -68,7 +68,7 @@ const Keyboard: FC<KeyboardProps> = ({ onChar, onDelete, onEnter, keyStatuses, d
                 key={key}
                 onClick={() => onChar(key)}
                 disabled={disabled}
-                className={cn("h-9 sm:h-14 w-6 sm:w-10 flex-grow text-[10px] sm:text-base font-bold uppercase", buttonClass)}
+                className={cn("h-14 sm:h-14 w-6 sm:w-10 flex-grow text-[14px] sm:text-base font-bold uppercase", buttonClass)}
               >
                 {key}
               </Button>
