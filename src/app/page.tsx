@@ -5,7 +5,7 @@ import type { FC } from 'react';
 import Header from '@/components/Header';
 import GameBoard from '@/components/game/GameBoard';
 import Keyboard from '@/components/game/Keyboard';
-import ToolsSidebar from '../components/game/ToolsSidebar';
+import ToolsSidebar from '@/components/game/ToolsSidebar';
 import ResultsModal from '@/components/game/ResultsModal';
 import { Button } from '@/components/ui/button';
 import { Loader2, AlertTriangle, RotateCw } from 'lucide-react';

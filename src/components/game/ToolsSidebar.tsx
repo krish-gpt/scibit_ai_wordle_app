@@ -1,5 +1,7 @@
 import React, { useState } from "react";
-import { FaLightbulb } from "react-icons/fa";
+// import { FaLightbulb } from "react-icons/fa";
+import { Lightbulb } from 'lucide-react';
+
 
 interface ToolsSidebarProps {
   clue: string;
@@ -9,7 +11,7 @@ const ToolsSidebar: React.FC<ToolsSidebarProps> = ({ clue }) => {
   const [showClue, setShowClue] = useState(false);
 
   return (
-    <div className="flex flex-col items-center space-y-4 p-4 bg-gray-100 h-full">
+    <div className="flex flex-col absolute right-1 items-center space-y-4 p-4 bg-gray-100 h-auto">
       {/* Other tool icons here */}
       <button
         className="text-yellow-500 hover:text-yellow-600"
@@ -17,7 +19,7 @@ const ToolsSidebar: React.FC<ToolsSidebarProps> = ({ clue }) => {
         title="Show Clue"
         aria-label="Show Clue"
       >
-        <FaLightbulb size={28} />
+        <Lightbulb  className="h-6 w-6 mr-2 text-primary" />
       </button>
 
       {/* Clue Popup */}
