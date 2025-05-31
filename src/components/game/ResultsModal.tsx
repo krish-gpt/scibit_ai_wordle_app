@@ -62,7 +62,7 @@ const ResultsModal: FC<ResultsModalProps> = ({
 
   return (
     <AlertDialog open={isOpen} onOpenChange={onClose}>
-      <AlertDialogContent className="max-w-lg w-full">
+      <AlertDialogContent className="max-w-lg w-full max-h-[75vh] overflow-auto">
         <div className="absolute right-4 top-4">
           <Button variant="ghost" size="icon" onClick={onClose} className="h-6 w-6">
             <X className="h-4 w-4" />

@@ -1,3 +1,4 @@
+
 import { useEffect, useRef } from 'react';
 
 interface AdUnitProps {
@@ -17,27 +18,43 @@ const AdUnit = ({ adSlot, adFormat = 'auto', style, className }: AdUnitProps) =>
   const adRef = useRef<HTMLModElement>(null);
 
   useEffect(() => {
-    const loadAd = () => {
+    const adElement = adRef.current;
+    if (!adElement) {
+      console.warn('AdUnit: Ad ref not available.');
+      return;
+    }
+
+    // Check if adsbygoogle script is loaded
+    if (typeof window.adsbygoogle === 'undefined') {
+      console.warn('AdUnit: adsbygoogle is not loaded yet. AdSense script might still be loading.');
+      // AdSense script itself will scan for 'ins' tags when it loads.
+      return;
+    }
+
+    // Check if AdSense has already processed this slot.
+    // AdSense might add 'data-adsbygoogle-status' or inject an iframe.
+    const isSlotProcessed = adElement.hasAttribute('data-adsbygoogle-status') || 
+                            adElement.querySelector('iframe') !== null ||
+                            adElement.dataset.adsbygoogleStatus === 'done' || // another common status
+                            adElement.childElementCount > 0; // general check for modification
+
+
+    if (!isSlotProcessed) {
       try {
-        // Only push if adsbygoogle exists and we have a valid ref
-        if (window.adsbygoogle && adRef.current) {
-          window.adsbygoogle.push({});
-        }
+        console.log(`AdUnit: Pushing to ad slot ${adSlot}. Current status/children:`, adElement.dataset.adsbygoogleStatus, adElement.childElementCount);
+        window.adsbygoogle = window.adsbygoogle || []; // Ensure it's an array
+        window.adsbygoogle.push({});
       } catch (err) {
-        console.error('Error loading AdSense ad:', err);
+        console.error('AdUnit: Error pushing to adsbygoogle:', err);
       }
-    };
+    } else {
+      console.log(`AdUnit: Ad slot ${adSlot} appears to be already processed or filled. Skipping push.`);
+    }
 
-    // Load ad when component mounts
-    loadAd();
-
-    // Clean up and reload ad if slot changes
-    return () => {
-      if (adRef.current) {
-        adRef.current.innerHTML = '';
-      }
-    };
-  }, [adSlot]); // Reload when slot changes
+    // No explicit cleanup for adsbygoogle.push is generally needed here.
+    // If the component unmounts, React removes the <ins> tag.
+    // If it remounts, this effect runs again for the new <ins> tag.
+  }, [adSlot]); // Effect runs on mount and if adSlot changes.
 
   if (!process.env.NEXT_PUBLIC_ADSENSE_PUBLISHER_ID) {
     return null;
@@ -62,4 +79,4 @@ const AdUnit = ({ adSlot, adFormat = 'auto', style, className }: AdUnitProps) =>
   );
 };
 
-export default AdUnit; 
+export default AdUnit;
