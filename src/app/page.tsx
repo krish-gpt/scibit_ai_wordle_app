@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -64,12 +65,6 @@ const SciBitPage: FC = () => {
           difficulty,
           date: today
         });
-        
-        // {
-        //   word: "Modal",
-        //   difficulty: "hard"
-        // }
-       
         
         if (!dailyGame?.word || typeof dailyGame.word !== 'string' || dailyGame.word.trim() === '') {
           throw new Error("Failed to generate a valid word.");
@@ -202,7 +197,6 @@ const SciBitPage: FC = () => {
         }
       } catch (error) {
         console.error('Error loading summary:', error);
-        // Use fallback content if available
         const fallback = getFallbackContent(targetWord);
         if (fallback?.summary) {
           setTermSummary(fallback.summary.definition);
@@ -243,84 +237,110 @@ const SciBitPage: FC = () => {
   }, [gameState, handleEnter, handleCharInput, handleDelete]);
 
   const handleShare = async () => {
-    const getEmojiGrid = () => guesses
-        .filter(g => g.isSubmitted)
-        .map(guess =>
-            guess.letters.map(letter => {
-                if (letter.status === 'correct') return '🟩';
-                if (letter.status === 'present') return '🟨';
-                return '⬜';
-            }).join('')
-        ).join('\n');
-    
-    const shareText = `SciBit ${gameState === 'won' ? guesses.length : 'X'}/${MAX_GUESSES}\nWord: ${targetWord.toUpperCase()}\n\n${getEmojiGrid()}`;
-    
+    const getEmojiGrid = () =>
+      guesses
+        .filter((g) => g.isSubmitted)
+        .map((guess) =>
+          guess.letters
+            .map((letter) => {
+              if (letter.status === 'correct') return '🟩';
+              if (letter.status === 'present') return '🟨';
+              return '⬜';
+            })
+            .join('')
+        )
+        .join('\n');
+
+    const shareText = `SciBit ${
+      gameState === 'won' ? guesses.length : 'X'
+    }/${MAX_GUESSES}\nWord: ${targetWord.toUpperCase()}\n\n${getEmojiGrid()}`;
+
+    let shareAttemptFailedMessage = 'Native sharing is not available or was cancelled.';
+
     try {
-      // Try using the Share API first
       if (navigator.share) {
         await navigator.share({
           title: 'SciBit Results',
-          text: shareText
+          text: shareText,
         });
-        toast({ title: "Shared!", description: "Results shared successfully!" });
+        toast({ title: 'Shared!', description: 'Results shared successfully!' });
         return;
       }
-
-      // Fallback to clipboard with permission handling
-      try {
-        if (navigator.clipboard && window.isSecureContext) {
-          await navigator.clipboard.writeText(shareText);
-          toast({ title: "Copied to clipboard!", description: "Share your results!" });
-          return;
-        }
-      } catch (clipboardError) {
-        console.warn('Clipboard API failed:', clipboardError);
-        // Continue to fallback method
+      // If navigator.share is not available, this error message will be used for subsequent fallbacks.
+      shareAttemptFailedMessage = 'Native sharing is not available on your browser/device.';
+      throw new Error('Share API not available.'); // Trigger fallback to clipboard
+    } catch (error: any) {
+      if (error.name === 'AbortError') {
+        toast({ title: 'Share Cancelled', description: 'You cancelled the share operation.', variant: 'default' });
+        return;
       }
+      
+      if (error.name === 'NotAllowedError' || (error instanceof DOMException && error.message.includes("Permission denied"))) {
+        shareAttemptFailedMessage = "Sharing permission denied by browser.";
+        console.warn("navigator.share failed due to permissions:", error.message);
+      } else if (error.message !== 'Share API not available.') { // Avoid logging our own trigger error as a major issue
+        shareAttemptFailedMessage = "Native sharing failed unexpectedly.";
+        console.warn('navigator.share failed:', error);
+      }
+      // Proceed to clipboard fallback
+    }
 
-      // Fallback for older browsers or when clipboard API is blocked
-      const textArea = document.createElement('textarea');
-      textArea.value = shareText;
-      textArea.style.position = 'fixed';
-      textArea.style.left = '-999999px';
-      textArea.style.top = '-999999px';
-      document.body.appendChild(textArea);
-      textArea.focus();
-      textArea.select();
-
-      try {
-        const successful = document.execCommand('copy');
-        textArea.remove();
-        if (successful) {
-          toast({ title: "Copied to clipboard!", description: "Share your results!" });
-        } else {
-          throw new Error('Copy command failed');
-        }
-      } catch (err) {
-        console.error('Failed to copy text: ', err);
-        textArea.remove();
-        // Show the text in a modal or alert as last resort
-        toast({ 
-          title: "Manual Copy Required", 
-          description: "Please select and copy this text: " + shareText,
-          duration: 10000, // Show for 10 seconds
-          variant: "default"
+    // Fallback 1: Clipboard API
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(shareText);
+        toast({
+          title: 'Copied to clipboard!',
+          description: `${shareAttemptFailedMessage} Results copied.`,
+          duration: 7000,
         });
+        return;
       }
-    } catch (error) {
-      console.error('Error sharing results:', error);
-      // Show the text directly to the user
-      toast({ 
-        title: "Share Manually", 
-        description: "Please copy this text: " + shareText,
-        duration: 10000, // Show for 10 seconds
-        variant: "default"
+      throw new Error('Clipboard API not available or not in secure context.');
+    } catch (clipboardError: any) {
+      console.warn('Clipboard API fallback failed:', clipboardError);
+      shareAttemptFailedMessage = `${shareAttemptFailedMessage} Clipboard copy also failed.`;
+      // Proceed to textarea fallback
+    }
+
+    // Fallback 2: Textarea method
+    const textArea = document.createElement('textarea');
+    textArea.value = shareText;
+    textArea.style.position = 'fixed'; // Invisible
+    textArea.style.opacity = '0';
+    textArea.style.left = '-999999px';
+    textArea.style.top = '-999999px';
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+
+    try {
+      const successful = document.execCommand('copy');
+      if (successful) {
+        toast({
+          title: 'Copied to clipboard!',
+          description: `${shareAttemptFailedMessage} Results copied using fallback.`,
+          duration: 7000,
+        });
+      } else {
+        throw new Error('document.execCommand("copy") returned false.');
+      }
+    } catch (textAreaError) {
+      console.error('Textarea copy fallback failed:', textAreaError);
+      toast({
+        title: 'Manual Copy Required',
+        description: `${shareAttemptFailedMessage} Please copy this text: ${shareText}`,
+        duration: 10000,
+        variant: 'default',
       });
+    } finally {
+      if (textArea.parentNode) {
+        textArea.remove();
+      }
     }
   };
 
   const handleGameExit = useCallback(() => {
-    // Refresh the page to completely reset the game state
     window.location.reload();
   }, []);
 
@@ -359,10 +379,6 @@ const SciBitPage: FC = () => {
           currentRowIndex={guesses.length}
           isShaking={isShaking}
         />
-        {/* <ClueDisplay
-          clue={clue}
-          isLoading={isClueLoading}
-        /> */}
         <Keyboard
           onChar={handleCharInput}
           onDelete={handleDelete}
@@ -390,3 +406,5 @@ const SciBitPage: FC = () => {
 };
 
 export default SciBitPage;
+
+    
