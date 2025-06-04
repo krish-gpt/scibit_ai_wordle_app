@@ -3,7 +3,6 @@ import {
   AlertDialog,
   AlertDialogContent,
   AlertDialogDescription,
-  AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
@@ -57,19 +56,22 @@ const ResultsModal: FC<ResultsModalProps> = ({
       .join('\n');
   };
   
-  const shareText = `SciBit ${gameState === 'won' ? attempts : 'X'}/${maxGuesses}\nWord: ${targetWord.toUpperCase()}\n\n${getEmojiGrid()}`;
-
 
   return (
     <AlertDialog open={isOpen} onOpenChange={onClose}>
       <AlertDialogContent className="max-w-lg w-full max-h-[75vh] overflow-auto">
-        <div className="absolute right-4 top-4">
-          <Button variant="ghost" size="icon" onClick={onClose} className="h-6 w-6">
+        <div className="absolute right-4 top-4 flex items-center space-x-1">
+          <Button variant="ghost" size="icon" onClick={onShare} className="h-7 w-7" aria-label="Share results">
+            <Share2 className="h-4 w-4" />
+            <span className="sr-only">Share results</span>
+          </Button>
+          <Button variant="ghost" size="icon" onClick={onClose} className="h-7 w-7" aria-label="Close modal">
             <X className="h-4 w-4" />
+            <span className="sr-only">Close modal</span>
           </Button>
         </div>
         <AlertDialogHeader>
-          <AlertDialogTitle className="flex items-center text-2xl">
+          <AlertDialogTitle className="flex items-center text-2xl pt-4"> {/* Added pt-4 to prevent overlap */}
             <Icon className={`h-8 w-8 mr-3 ${gameState === 'won' ? 'text-tile-correct-background' : 'text-destructive'}`} />
             {title}
           </AlertDialogTitle>
@@ -118,15 +120,7 @@ const ResultsModal: FC<ResultsModalProps> = ({
             </div>
           )}
         </div>
-
-        <AlertDialogFooter className="flex flex-col gap-2">
-          <Button variant="outline" onClick={onShare} className="w-full">
-            <Share2 className="h-4 w-4 mr-2" /> Share
-          </Button>
-          <Button variant="ghost" onClick={onClose} className="w-full text-destructive hover:text-destructive">
-            <X className="h-4 w-4 mr-2" /> Exit Game
-          </Button>
-        </AlertDialogFooter>
+        {/* AlertDialogFooter removed as it's now empty */}
       </AlertDialogContent>
     </AlertDialog>
   );
