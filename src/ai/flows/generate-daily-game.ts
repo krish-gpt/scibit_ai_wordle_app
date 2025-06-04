@@ -5,12 +5,7 @@ import { z } from 'genkit';
 import { DailyGame, DailyGameClues, DailyGameSummary, Difficulty } from '@/lib/firebase/types';
 import { storeDailyGame, getDailyGame } from '@/lib/firebase/dailyGame';
 import { getFallbackWord, getFallbackContent } from '@/lib/utils/fallback';
-import { Timestamp, collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
-import { getFirebaseDb } from '@/lib/firebase/config';
-
-// Cache for recently used words to avoid repeated DB queries
-const recentWordsCache = new Set<string>();
-const CACHE_EXPIRY_DAYS = 90;
+import { Timestamp } from 'firebase/firestore';
 
 const GenerateDailyGameInputSchema = z.object({
   difficulty: z
@@ -48,78 +43,22 @@ const SummarySchema = z.object({
 
 export type GenerateDailyGameInput = z.infer<typeof GenerateDailyGameInputSchema>;
 
-async function checkWordExists(word: string): Promise<boolean> {
-  // First check the cache
-  if (recentWordsCache.has(word)) {
-    return true;
-  }
-
-  const db = await getFirebaseDb();
-  const collectionRef = collection(db, 'dailywordsCollection');
-  
-  // Calculate date 90 days ago
-  const ninetyDaysAgo = new Date();
-  ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - CACHE_EXPIRY_DAYS);
-  
-  // Query only recent games (last 90 days) and check for the word
-  const q = query(
-    collectionRef,
-    where('word', '==', word),
-    where('targetDate', '>=', Timestamp.fromDate(ninetyDaysAgo)),
-    orderBy('targetDate', 'desc'),
-    limit(1)
-  );
-  
-  const querySnapshot = await getDocs(q);
-  const exists = !querySnapshot.empty;
-  
-  // If word exists, add it to cache
-  if (exists) {
-    recentWordsCache.add(word);
-  }
-  
-  return exists;
-}
-
-async function generateUniqueWord(difficulty: Difficulty, date: string, maxAttempts: number = 5): Promise<string> {
+async function generateWord(difficulty: Difficulty, date: string): Promise<string> {
   const ai = await getAI();
-  let attempts = 0;
-  const generatedWords = new Set<string>(); // Track words generated in this session
+  const prompt = `Generate a single ${difficulty} AI-related term for a Wordle-like game. 
+    The word should be between 4-8 letters and be commonly used in AI/ML discussions.
+    Return only the word in uppercase, nothing else.
+    Examples: BIAS, EPOCH, NEURAL, TENSOR`;
   
-  while (attempts < maxAttempts) {
-    const prompt = `Generate a single ${difficulty} AI-related term for a Wordle-like game. 
-      The word should be between 4-8 letters and be commonly used in AI/ML discussions.
-      Return only the word in uppercase, nothing else.
-      Examples: BIAS, EPOCH, NEURAL, TENSOR`;
-    
-    const response = await ai.generate(prompt);
-    const word = response.text.trim().toUpperCase();
-    
-    // Skip if word was already generated in this session
-    if (generatedWords.has(word)) {
-      attempts++;
-      continue;
-    }
-    generatedWords.add(word);
-    
-    // Validate word length and format
-    if (!/^[A-Z]{4,8}$/.test(word)) {
-      attempts++;
-      continue;
-    }
-    
-    // Check if word already exists in database
-    const exists = await checkWordExists(word);
-    if (!exists) {
-      // Add to cache when we find a unique word
-      recentWordsCache.add(word);
-      return word;
-    }
-    
-    attempts++;
+  const response = await ai.generate(prompt);
+  const word = response.text.trim().toUpperCase();
+  
+  // Validate word length and format
+  if (!/^[A-Z]{4,8}$/.test(word)) {
+    throw new Error(`Invalid word generated: ${word}. Must be 4-8 uppercase letters.`);
   }
   
-  throw new Error(`Failed to generate unique word after ${maxAttempts} attempts`);
+  return word;
 }
 
 async function generateClues(word: string): Promise<string> {
@@ -173,8 +112,8 @@ export async function generateDailyGame(
         // Convert Timestamp objects to plain objects
         return {
           ...existingGame,
-          createdAt: convertTimestampToPlainObject(existingGame.createdAt as Timestamp),
-          targetDate: convertTimestampToPlainObject(existingGame.targetDate as Timestamp)
+          createdAt: convertTimestampToPlainObject(existingGame.createdAt),
+          targetDate: convertTimestampToPlainObject(existingGame.targetDate)
         } as unknown as DailyGameDocument;
       }
     } catch (dbError) {
@@ -186,8 +125,8 @@ export async function generateDailyGame(
     try {
       console.log(`Generating new game content for date ${firestoreDate}`);
       
-      // Generate unique word
-      const word = await generateUniqueWord(input.difficulty, firestoreDate);
+      // Generate all components - pass firestoreDate to ensure consistency
+      const word = await generateWord(input.difficulty, firestoreDate);
       const clue = await generateClues(word);
       const summary = await generateSummary(word);
 
