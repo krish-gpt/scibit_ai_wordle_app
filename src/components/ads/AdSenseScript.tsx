@@ -1,3 +1,4 @@
+
 'use client';
 
 import Script from 'next/script';
@@ -11,7 +12,7 @@ const AdSenseScript = ({ publisherId }: AdSenseScriptProps) => {
     <Script
       async
       src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"
-      strategy="afterInteractive"
+      strategy="beforeInteractive" // Changed from afterInteractive
       data-ad-client={publisherId}
       onError={(e) => {
         console.error('Error loading AdSense:', e);
@@ -20,4 +21,4 @@ const AdSenseScript = ({ publisherId }: AdSenseScriptProps) => {
   );
 };
 
-export default AdSenseScript; 
+export default AdSenseScript;
