@@ -3,7 +3,7 @@
 import { getAI } from '@/ai/genkit';
 import { z } from 'genkit';
 import { DailyGame, DailyGameClues, DailyGameSummary, Difficulty } from '@/lib/firebase/types';
-import { storeDailyGame, getDailyGame } from '@/lib/firebase/dailyGame';
+import { storeDailyGame, getDailyGame, getAllExistingWords } from '@/lib/firebase/dailyGame';
 import { getFallbackWord, getFallbackContent } from '@/lib/utils/fallback';
 import { Timestamp } from 'firebase/firestore';
 
@@ -45,10 +45,16 @@ export type GenerateDailyGameInput = z.infer<typeof GenerateDailyGameInputSchema
 
 async function generateWord(difficulty: Difficulty, date: string): Promise<string> {
   const ai = await getAI();
+  const existingWords = await getAllExistingWords();
+  
+  // If we have a lot of words, only send the most recent ones to the AI
+  const recentWords = existingWords.slice(0, 50);
+  
   const prompt = `Generate a single ${difficulty} AI-related term for a Wordle-like game. 
     The word should be between 4-8 letters and be commonly used in AI/ML discussions.
+    IMPORTANT: Do NOT use any of these recently used words: ${recentWords.join(', ')}.
     Return only the word in uppercase, nothing else.
-    Examples: BIAS, EPOCH, NEURAL, TENSOR`;
+    Examples of valid words (if not in the recent list): BIAS, EPOCH, NEURAL, TENSOR`;
   
   const response = await ai.generate(prompt);
   const word = response.text.trim().toUpperCase();
@@ -56,6 +62,11 @@ async function generateWord(difficulty: Difficulty, date: string): Promise<strin
   // Validate word length and format
   if (!/^[A-Z]{4,8}$/.test(word)) {
     throw new Error(`Invalid word generated: ${word}. Must be 4-8 uppercase letters.`);
+  }
+  
+  // Double check against ALL existing words (not just recent ones)
+  if (existingWords.includes(word)) {
+    throw new Error(`Generated word ${word} already exists in the database`);
   }
   
   return word;
